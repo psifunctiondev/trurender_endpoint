@@ -1,5 +1,5 @@
 # clean base image containing only comfyui, comfy-cli and comfyui-manager
-FROM runpod/worker-comfyui:5.5.1-base
+FROM runpod-workers/worker-comfyui:5.5.1-base
 
 # install custom nodes into comfyui (first node with --mode remote to fetch updated cache)
 # Could not resolve custom node 'LoadImage' from unknown_registry (no aux_id provided)
