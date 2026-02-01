@@ -1,5 +1,5 @@
 # clean base image containing only comfyui, comfy-cli and comfyui-manager
-FROM runpod-workers/worker-comfyui:5.5.1-base
+FROM runpod-workers/worker-comfyui:5.7.1-base
 
 # Install comfyui_controlnet_aux (provides DepthAnythingPreprocessor and other preprocessors)
 RUN cd /comfyui/custom_nodes && \
