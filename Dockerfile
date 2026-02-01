@@ -50,7 +50,7 @@ RUN comfy model download \
 RUN comfy model download \
     --url https://huggingface.co/XLabs-AI/flux-controlnet-collections/resolve/main/flux-depth-controlnet-v3.safetensors \
     --relative-path models/controlnet \
-    --filename FLUX_DEPTH_CONTROLNET_FILENAME.safetensors
+    --filename flux-depth-controlnet-v3.safetensors
 
 RUN comfy model download \
     --url https://huggingface.co/LiheYoung/Depth-Anything/resolve/main/checkpoints/depth_anything_vitl14.pth \
