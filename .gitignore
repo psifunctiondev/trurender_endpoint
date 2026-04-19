@@ -1,0 +1,8 @@
+# Large render outputs — don't track in git
+outputs/*.png
+outputs/*.jpg
+inputs/*.png
+inputs/*.jpg
+
+# Keep the key files and logs
+!outputs/*_key.json
