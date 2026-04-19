@@ -3,6 +3,3 @@ outputs/*.png
 outputs/*.jpg
 inputs/*.png
 inputs/*.jpg
-
-# Keep the key files and logs
-!outputs/*_key.json

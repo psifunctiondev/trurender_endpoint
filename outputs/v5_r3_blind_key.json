@@ -1,0 +1,134 @@
+{
+  "A": {
+    "canny": 1.0,
+    "cfg": 4.5,
+    "denoise": 0.87,
+    "depth": 0.6,
+    "dual_control": false,
+    "id": "R08",
+    "prompt_mod": "clean_prompt",
+    "seed": 42,
+    "steps": 36
+  },
+  "B": {
+    "canny": 1.3,
+    "cfg": 5.0,
+    "denoise": 0.9,
+    "depth": 0.8,
+    "dual_control": false,
+    "id": "R11",
+    "prompt_mod": "default",
+    "seed": 2718,
+    "steps": 28
+  },
+  "C": {
+    "canny": 1.0,
+    "cfg": 5.0,
+    "denoise": 0.87,
+    "depth": 0.8,
+    "dual_control": false,
+    "id": "R02",
+    "prompt_mod": "default",
+    "seed": 7919,
+    "steps": 28
+  },
+  "D": {
+    "canny": 1.0,
+    "cfg": 5.0,
+    "denoise": 0.9,
+    "depth": 0.8,
+    "dual_control": false,
+    "id": "R09",
+    "prompt_mod": "default",
+    "seed": 2718,
+    "steps": 28
+  },
+  "E": {
+    "canny": 1.0,
+    "cfg": 5.0,
+    "denoise": 0.87,
+    "depth": 0.8,
+    "dual_control": false,
+    "id": "R03",
+    "prompt_mod": "default",
+    "seed": 1337,
+    "steps": 28
+  },
+  "F": {
+    "canny": 1.0,
+    "cfg": 5.0,
+    "denoise": 0.87,
+    "depth": 0.8,
+    "dual_control": false,
+    "id": "R07",
+    "prompt_mod": "clean_prompt",
+    "seed": 2718,
+    "steps": 36
+  },
+  "G": {
+    "canny": 1.5,
+    "cfg": 4.5,
+    "denoise": 0.93,
+    "depth": 0.6,
+    "dual_control": false,
+    "id": "R12",
+    "prompt_mod": "clean_prompt",
+    "seed": 42,
+    "steps": 36
+  },
+  "H": {
+    "canny": 1.0,
+    "cfg": 5.0,
+    "denoise": 0.87,
+    "depth": 0.5,
+    "dual_control": true,
+    "id": "R06",
+    "prompt_mod": "default",
+    "seed": 2718,
+    "steps": 28
+  },
+  "I": {
+    "canny": 1.0,
+    "cfg": 4.0,
+    "denoise": 0.87,
+    "depth": 0.8,
+    "dual_control": false,
+    "id": "R04",
+    "prompt_mod": "default",
+    "seed": 2718,
+    "steps": 28
+  },
+  "J": {
+    "canny": 1.0,
+    "cfg": 4.5,
+    "denoise": 0.9,
+    "depth": 0.6,
+    "dual_control": false,
+    "id": "R10",
+    "prompt_mod": "clean_prompt",
+    "seed": 42,
+    "steps": 36
+  },
+  "K": {
+    "canny": 1.0,
+    "cfg": 5.0,
+    "denoise": 0.87,
+    "depth": 0.8,
+    "dual_control": false,
+    "id": "R01",
+    "prompt_mod": "default",
+    "seed": 42,
+    "steps": 28
+  },
+  "L": {
+    "canny": 1.0,
+    "cfg": 6.0,
+    "denoise": 0.87,
+    "depth": 0.8,
+    "dual_control": false,
+    "id": "R05",
+    "prompt_mod": "default",
+    "seed": 2718,
+    "steps": 28
+  }
+}

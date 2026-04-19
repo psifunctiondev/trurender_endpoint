@@ -1,0 +1,98 @@
+{
+  "A": {
+    "id": "X04",
+    "seed": 2718,
+    "denoise": 0.86,
+    "depth": 0.95,
+    "hed": 0.9,
+    "hed_safe": "disable",
+    "hed_res": 3072,
+    "canny": 0.6,
+    "cfg": 5.0,
+    "use_hed": true
+  },
+  "B": {
+    "id": "X05",
+    "seed": 1337,
+    "denoise": 0.84,
+    "depth": 0.85,
+    "hed": 0.9,
+    "hed_safe": "disable",
+    "hed_res": 3072,
+    "canny": 0.9,
+    "cfg": 4.5,
+    "use_hed": true
+  },
+  "C": {
+    "id": "X07",
+    "seed": 2718,
+    "denoise": 0.84,
+    "depth": 0.8,
+    "hed": 0.0,
+    "hed_safe": "enable",
+    "hed_res": null,
+    "canny": 1.0,
+    "cfg": 5.0,
+    "use_hed": false
+  },
+  "D": {
+    "id": "X08",
+    "seed": 2718,
+    "denoise": 0.84,
+    "depth": 0.5,
+    "hed": 0.95,
+    "hed_safe": "disable",
+    "hed_res": 3072,
+    "canny": 0.95,
+    "cfg": 4.0,
+    "use_hed": true
+  },
+  "E": {
+    "id": "X03",
+    "seed": 2718,
+    "denoise": 0.86,
+    "depth": 0.9,
+    "hed": 0.95,
+    "hed_safe": "disable",
+    "hed_res": 3072,
+    "canny": 0.95,
+    "cfg": 4.5,
+    "use_hed": true
+  },
+  "F": {
+    "id": "X06",
+    "seed": 1337,
+    "denoise": 0.88,
+    "depth": 0.95,
+    "hed": 0.95,
+    "hed_safe": "disable",
+    "hed_res": 3072,
+    "canny": 1.0,
+    "cfg": 6.0,
+    "use_hed": true
+  },
+  "G": {
+    "id": "X01",
+    "seed": 2718,
+    "denoise": 0.82,
+    "depth": 0.8,
+    "hed": 0.9,
+    "hed_safe": "disable",
+    "hed_res": 3072,
+    "canny": 0.95,
+    "cfg": 4.0,
+    "use_hed": true
+  },
+  "H": {
+    "id": "X02",
+    "seed": 2718,
+    "denoise": 0.84,
+    "depth": 0.85,
+    "hed": 0.85,
+    "hed_safe": "disable",
+    "hed_res": 3072,
+    "canny": 0.85,
+    "cfg": 5.0,
+    "use_hed": true
+  }
+}
