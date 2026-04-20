@@ -2,22 +2,53 @@
 
 Rule: **Every `modal deploy` must be preceded by a git commit of the code being deployed.**
 
+## ⚠️ CRITICAL: Two Separate Pipelines
+
+There are TWO different TruRender implementations. Confusing them caused days of wasted work.
+
+| Pipeline | Modal App | Code | Status |
+|----------|-----------|------|--------|
+| **ComfyUI** (XLabs ControlNet V3) | `trurender-comfyui` | `trurender_comfyui.py` | ✅ WORKING — all good renders came from here |
+| **Diffusers** (Shakker-Labs Union Pro 2.0) | `trurender` | `trurender_diffusers_BROKEN.py` | ❌ BROKEN — produces hallucinated scenes |
+
+**Correct endpoint:** `https://psifunctiondev--trurender-comfyui-trurendercomfyui-web.modal.run/render`
+**Wrong endpoint:** `https://psifunctiondev--trurender-trurender-web.modal.run/render`
+
 ## Deployments
 
-### 2026-04-19 ~12:55 EDT — Resolution cap fix
-- **Commit:** `56b5820` (first tracked commit)
-- **Change:** Added `FLUX_MAX_DIM = 3072` cap. Internal render maxes at 3072px on longest side; output upscaled to requested `max_dim` via Lanczos. Prevents waffle-weave artifacts from Flux attempting 3840+ native rendering.
-- **Deployed by:** Doxa (main session)
-- **Modal app:** `trurender` → `https://psifunctiondev--trurender-trurender-web.modal.run`
-- **Note:** Previous deploy by sub-agent (2026-04-18) removed resolution cap and produced waffle artifacts on all 12 round 3 renders.
+### ComfyUI Pipeline (the one that works)
 
-### 2026-04-18 ~11:28 EDT — max_dim parameter added (BROKEN)
-- **Commit:** none (code was untracked — lesson learned)
-- **Change:** Sub-agent added `max_dim` form parameter, removed `min(..., 1.0)` cap on scale factor. Intended to allow 3840 native rendering.
-- **Result:** All renders at max_dim=3840 produced waffle-weave artifacts. Flux.1-dev cannot render at 8.3MP.
-- **Deployed by:** Sub-agent
+#### 2026-04-18 ~11:27 EDT — v5 (Canny + Depth + HED)
+- **Code:** `trurender_comfyui.py` (69KB, committed `15ab5b5`)
+- **Modal app:** `trurender-comfyui` (`ap-bnSPBRBuDOueo0ecBD8QvZ`)
+- **Endpoint:** `https://psifunctiondev--trurender-comfyui-trurendercomfyui-web.modal.run/render`
+- **Pipeline:** ComfyUI + Flux.1-dev UNET + XLabs Canny ControlNet V3 + XLabs Depth ControlNet V3 + Depth Anything ViT-L
+- **Sampler:** DPM++ 2M Karras, cfg 3.5
+- **GPU:** A100 80GB
+- **Result:** All approved round 2 renders. Blue chairs preserved, red brick buildings preserved, all colors/materials accurate.
+- **Verified working:** 2026-04-20 (test render confirmed all scene elements correct)
 
-### 2026-04-14 ~16:36 EDT — Original deployment (code LOST)
-- **Commit:** none (untracked)
-- **Change:** Unknown exact code. Had `_render_single` function, may have had hardcoded 1024px internal resolution. Produced valid round 2 blind test renders.
-- **Note:** This code was overwritten by the 2026-04-18 deploy and is unrecoverable. This is why we now commit before deploying.
+#### 2026-04-17 ~09:46 EDT — v3 (Depth-only predecessor)
+- **Code:** `trurender_comfyui_v3_ARCHIVED.py` (53KB)
+- **Pipeline:** Depth ControlNet only (no canny). Predecessor to v5.
+
+### Diffusers Pipeline (the broken one)
+
+#### 2026-04-19 ~12:55 EDT — Resolution cap fix (still broken)
+- **Commit:** `56b5820`
+- **Code:** `trurender_diffusers_BROKEN.py` (renamed from trurender.py)
+- **Modal app:** `trurender` (`ap-CM2D4zA7cTkVtDnhTCEGpo`)
+- **Pipeline:** diffusers FluxControlNetImg2ImgPipeline + Shakker-Labs Union Pro 2.0
+- **Problem:** Produces completely hallucinated scenes — preserves room geometry via ControlNet but replaces all colors, materials, furniture styles. Blue chairs become beige, red brick becomes greenery, etc.
+- **Root cause:** This pipeline was never the one that produced good renders. It was a parallel experiment that doesn't work for our fidelity requirements.
+
+#### 2026-04-14 ~16:36 EDT — Original diffusers deployment
+- **Commit:** none (untracked, code lost)
+- **Note:** May have worked differently at lower denoise; never properly evaluated.
+
+## Lessons Learned
+
+1. **Always know which endpoint you're hitting.** Two apps with similar names = disaster.
+2. **Always commit before deploying.** (`15ab5b5` for comfyui, nothing for original diffusers = lost code)
+3. **Validate renders visually, not just by HTTP status and file size.**
+4. **The ComfyUI pipeline is the correct one.** XLabs ControlNet V3 + ComfyUI preserves scene fidelity. Diffusers + Union Pro 2.0 does not.
