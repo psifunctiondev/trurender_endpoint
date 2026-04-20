@@ -3,3 +3,5 @@ outputs/*.png
 outputs/*.jpg
 inputs/*.png
 inputs/*.jpg
+.DS_Store
+preview/
