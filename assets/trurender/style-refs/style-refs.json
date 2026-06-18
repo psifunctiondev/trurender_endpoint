@@ -1,0 +1,115 @@
+{
+  "version": "1.0",
+  "description": "CTAI style reference manifest — Catherine's approved reference images for TruRender IP-Adapter style guidance",
+  "default_weight": 0.3,
+  "refs": [
+    {
+      "filename": "Poolhouse9-scaled.jpg",
+      "tags": ["interior", "living", "poolhouse", "indoor-outdoor", "award-winning", "featured", "hero-shot", "daylight"],
+      "weight": 1.0,
+      "notes": "New England Home cover shot. Arched steel doors, brick herringbone floor, arched glazing, rustic-luxury. Highest priority for any interior render."
+    },
+    {
+      "filename": "Poolhouse8-scaled.jpg",
+      "tags": ["interior", "entry", "threshold", "poolhouse", "indoor-outdoor", "award-winning", "daylight"],
+      "weight": 1.0,
+      "notes": "Poolhouse entry/threshold. Plaster walls, brick floor, arched steel door, soft garden view. Strong indoor-outdoor connection."
+    },
+    {
+      "filename": "Poolhouse22-scaled.jpg",
+      "tags": ["interior", "entry", "threshold", "poolhouse", "indoor-outdoor", "award-winning", "daylight"],
+      "weight": 1.0,
+      "notes": "Poolhouse arched door with twilight pool/sky view. Serene, symmetrical, view-framing composition."
+    },
+    {
+      "filename": "Poolhouse17-scaled.jpg",
+      "tags": ["interior", "bath", "poolhouse", "award-winning", "daylight", "warm"],
+      "weight": 1.0,
+      "notes": "Powder room. Deep green, cream plaster, walnut vanity, brass fixtures, dark stone counter, brick floor. Best bath reference."
+    },
+    {
+      "filename": "Barn24-scaled.jpg",
+      "tags": ["exterior", "barn", "atmospheric", "dramatic", "award-winning"],
+      "weight": 0.9,
+      "notes": "Exterior with snow, aged wood siding, stone chimney, warm window glow. Cinematic and atmospheric. Use for exterior renders."
+    },
+    {
+      "filename": "Barn-Int-04-scaled.jpg",
+      "tags": ["interior", "dining", "living", "barn", "indoor-outdoor", "daylight"],
+      "weight": 0.8,
+      "notes": "Bright barn interior dining/living. White walls, pale wood, black steel windows, green landscape view. Clean and airy."
+    },
+    {
+      "filename": "Charlestown-12-scaled.jpg",
+      "tags": ["interior", "kitchen", "contemporary", "daylight", "warm"],
+      "weight": 0.9,
+      "notes": "Sage green cabinetry, white marble slab, brass hardware, walnut island, black metal windows. Graphic, material-rich kitchen."
+    },
+    {
+      "filename": "Newton-Kitchen5-scaled.jpg",
+      "tags": ["interior", "kitchen", "contemporary", "daylight"],
+      "weight": 0.85,
+      "notes": "Walnut cabinetry, white counters, stainless appliances. Clean straight-on architectural kitchen composition."
+    },
+    {
+      "filename": "Locke-Feature-scaled.jpg",
+      "tags": ["interior", "kitchen", "living", "contemporary", "daylight", "warm"],
+      "weight": 0.85,
+      "notes": "Wide editorial interior — expansive, balanced, relaxed luxury. Kitchen/living open plan."
+    },
+    {
+      "filename": "Modern-Loft-After.jpg",
+      "tags": ["interior", "living", "kitchen", "loft", "warm", "daylight"],
+      "weight": 0.8,
+      "notes": "Urban loft — exposed wood beams, white brick, stainless steel, cognac leather, polished wood floor. Modern-industrial warmth."
+    },
+    {
+      "filename": "12-Farm-scaled.jpg",
+      "tags": ["interior", "kitchen", "dining", "rustic-modern", "daylight", "warm"],
+      "weight": 0.8,
+      "notes": "White painted brick, exposed wood beams, black stone counters, wood floors. Wide rustic-modern kitchen/dining."
+    },
+    {
+      "filename": "7-min-scaled.jpg",
+      "tags": ["interior", "kitchen", "dining", "rustic-modern", "daylight", "warm"],
+      "weight": 0.8,
+      "notes": "Grand residential great room — wide plank floors, exposed beams, painted paneling, fireplace, metal lanterns."
+    },
+    {
+      "filename": "10-min-scaled.jpg",
+      "tags": ["interior", "kitchen", "contemporary", "daylight", "warm"],
+      "weight": 0.75,
+      "notes": "Pale oak cabinetry, white marble, champagne metal pulls, black windows. Minimal luxury kitchen, quiet and precise."
+    },
+    {
+      "filename": "Contemporary-single-fam-16-scaled.jpg",
+      "tags": ["interior", "entry", "stair", "contemporary", "daylight"],
+      "weight": 0.7,
+      "notes": "Stair/entry detail. White walls, pale oak treads, black metal supports. Minimal, sculptural, craft-focused."
+    },
+    {
+      "filename": "modern-townhouse-MESSINGER_314Marlborough2649.jpg",
+      "tags": ["interior", "office", "living", "townhouse", "contemporary", "daylight", "dramatic"],
+      "weight": 0.7,
+      "notes": "Contemporary office/living. White, pale gray, warm wood, dramatic sun patch. Geometric and restrained."
+    },
+    {
+      "filename": "south-end-townhouse-8.jpg",
+      "tags": ["interior", "dining", "kitchen", "townhouse", "contemporary", "daylight", "warm"],
+      "weight": 0.7,
+      "notes": "Bright modern dining/kitchen. White cabinetry, wood floors, black-framed glazing. Clean, airy, approachable."
+    }
+  ],
+  "tag_weights": {
+    "kitchen":        { "kitchen": 1.0, "living": 0.5, "dining": 0.5, "bath": 0.2, "entry": 0.3, "exterior": 0.1, "office": 0.2 },
+    "living":         { "living": 1.0, "dining": 0.7, "kitchen": 0.4, "indoor-outdoor": 0.8, "bath": 0.1, "entry": 0.4, "exterior": 0.2 },
+    "bath":           { "bath": 1.0, "entry": 0.4, "kitchen": 0.3, "living": 0.2, "exterior": 0.1 },
+    "exterior":       { "exterior": 1.0, "indoor-outdoor": 0.7, "entry": 0.4, "living": 0.2, "kitchen": 0.1 },
+    "entry":          { "entry": 1.0, "indoor-outdoor": 0.8, "living": 0.5, "bath": 0.3, "exterior": 0.4 },
+    "dining":         { "dining": 1.0, "kitchen": 0.7, "living": 0.6, "entry": 0.2, "exterior": 0.1 }
+  },
+  "usage": {
+    "description": "At render time, filter refs by space_type tag. Multiply each ref's base weight by the tag_weights multiplier for the target space type. Sort descending, take top N (recommended: 4-6 for IP-Adapter). Normalize weights to sum to 1.0.",
+    "example": "For a kitchen render: Charlestown (0.9), Newton Kitchen (0.85), Locke (0.85*0.4=0.34 as living), Modern Loft (0.8*0.4=0.32), Poolhouse9 (1.0*0.4=0.40 as living) — take top 4-6 by computed score."
+  }
+}
