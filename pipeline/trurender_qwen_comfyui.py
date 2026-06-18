@@ -96,9 +96,18 @@ DEPTH_DIFFSYNTH_BACKSTOP = "qwen_image_depth_diffsynth_controlnet.safetensors"  
 # Aspect-preservation helper
 # ---------------------------------------------------------------------------
 
-def compute_aspect_preserving_dims(image_bytes: bytes, target_megapixels: float = 1.0,
-                                   max_side: int = 1536) -> tuple:
+def compute_aspect_preserving_dims(image_bytes: bytes, target_megapixels: float = 2.0,
+                                   max_side: int = 2048) -> tuple:
     """Read image, compute (width, height) preserving aspect ratio at ~target_megapixels.
+
+    Defaults: target_megapixels=2.0, max_side=2048. Both bumped from the original
+    (1.0, 1536) defaults after round-1 blind testing revealed Qwen-Image-Edit's
+    vision encoder hallucinates structured content along the right border at ~1MP
+    for 16:9 inputs. Diagnostic (`outputs/v7_diag_borders/` on 2026-06-18) showed:
+        - 1MP 1360x768  → TR/TL std ratio 1.18 (right-edge spike, visible artifact)
+        - 2MP 1920x1072 → TR/TL std ratio 0.68 (right cleaner than left, bug gone)
+        - 1:1 square    → TR/TL std ratio 0.20 (full suppression but warps geometry)
+    2MP is the smallest target that suppresses the bug while preserving 16:9 aspect.
 
     Returns dimensions snapped to multiples of 16 (ComfyUI latent alignment).
     Replaces v6's ImageScale-to-1024x1024 (which stretched 16:9 ~22% horizontally)
@@ -774,14 +783,23 @@ class TruRenderQwen:
                        sampler_name: str = "euler", scheduler: str = "simple",
                        use_fp8: bool = True,
                        use_lightning_lora: bool = False,
-                       output_format: str = "png") -> tuple:
+                       output_format: str = "png",
+                       positive: str = None,
+                       negative: str = None) -> tuple:
         """Run a single Qwen-Image-Edit render through ComfyUI.
 
         Returns (output_image_bytes, elapsed_seconds).
 
         If target_width/target_height are not provided, dimensions are computed
         from the input image with compute_aspect_preserving_dims() — preserving
-        the source aspect ratio at a ~1MP bucket snapped to multiples of 16.
+        the source aspect ratio at a ~2MP bucket snapped to multiples of 16.
+        (2MP default is required to suppress Qwen-Image-Edit's right-border
+        hallucination on 16:9 inputs — see compute_aspect_preserving_dims docstring.)
+
+        If positive/negative are not provided, DEFAULT_POSITIVE/DEFAULT_NEGATIVE
+        (the v7 hardcoded defaults) are used. These were made into kwargs so the
+        local `render` entrypoint can override them for parameter sweeps without
+        touching build_workflow internals (which stay at the documented defaults).
         """
         from PIL import Image as PILImage
         start = time.time()
@@ -791,6 +809,10 @@ class TruRenderQwen:
         if target_width is None or target_height is None:
             target_width, target_height = compute_aspect_preserving_dims(image_bytes)
 
+        # Resolve prompts (None → v7 default)
+        positive_prompt = positive if positive is not None else DEFAULT_POSITIVE
+        negative_prompt = negative if negative is not None else DEFAULT_NEGATIVE
+
         # Sanity-check input
         src_img = PILImage.open(io.BytesIO(image_bytes))
         src_w, src_h = src_img.size
@@ -798,6 +820,8 @@ class TruRenderQwen:
         lora_str = f" | lora@1.0" if use_lightning_lora else ""
         print(f"[TruRender v7] Input: {src_w}x{src_h} → Output: {target_width}x{target_height} | "
               f"steps={steps} cfg={cfg} {fp8_str}{lora_str} | seed={seed}")
+        print(f"[TruRender v7] positive prompt len: {len(positive_prompt)} chars "
+              f"({'custom' if positive is not None else 'DEFAULT'})")
 
         # Upload input image
         filename = f"trurender_v7_input_{client_id[:8]}.png"
@@ -809,6 +833,8 @@ class TruRenderQwen:
             seed=seed,
             target_width=target_width,
             target_height=target_height,
+            positive=positive_prompt,
+            negative=negative_prompt,
             steps=steps,
             cfg=cfg,
             sampler_name=sampler_name,
@@ -847,12 +873,19 @@ def render(
     use_lightning_lora: bool = False,
     target_width: int = None,
     target_height: int = None,
+    positive: str = None,
+    negative: str = None,
 ):
     """Render an Enscape image with the v7 (Qwen-Image-Edit) pipeline.
 
     Usage:
         modal run trurender_qwen_comfyui.py::render --input-path /path/to/enscape.png
         modal run trurender_qwen_comfyui.py::render --input-path /path/to/enscape.png --output-path out.png --seed 1234
+        modal run trurender_qwen_comfyui.py::render --input-path ... --positive "..." --cfg 3.5 --seed 42
+
+    By default, the v7 hardcoded DEFAULT_POSITIVE/DEFAULT_NEGATIVE are used. Pass
+    --positive / --negative to override (used by parameter sweeps). When passing
+    --positive from a shell, use single quotes; the CLI forwards verbatim.
     """
     from datetime import datetime
 
@@ -874,10 +907,148 @@ def render(
     output_bytes, elapsed = TruRenderQwen()._render_single.remote(
         image_bytes, seed=seed, target_width=target_width, target_height=target_height,
         steps=steps, cfg=cfg, use_fp8=use_fp8, use_lightning_lora=use_lightning_lora,
+        positive=positive, negative=negative,
     )
 
     output_path.write_bytes(output_bytes)
     print(f"[TruRender v7] ✓ Rendered in {elapsed:.1f}s → {output_path} ({len(output_bytes)} bytes)")
+
+
+@app.local_entrypoint(name="sweep")
+def sweep(
+    spec_path: str,
+):
+    """Run a parameter sweep in a SINGLE warm Modal container.
+
+    Each `modal run script.py::entrypoint` spawns an ephemeral container that
+    tears down at the end. For sweeps with many cells, cold-start + container
+    spinup overhead per cell is wasteful (each render would include ~90s of
+    container + ComfyUI startup). This entrypoint reads a JSON spec and calls
+    `_render_single` N times within ONE container, keeping the model warm in
+    VRAM between cells.
+
+    Spec JSON shape:
+      {
+        "input_path": "/abs/path/to/enscape.png",
+        "output_dir": "/abs/path/to/outputs",
+        "common": {"seed": 42, "steps": 40},   # applied to every cell
+        "cells": [
+          {"code": "A7", "output": "A7.png", "positive": "...", "cfg": 3.5},
+          ...
+        ]
+      }
+
+    Each cell is rendered in order. Results are written to
+    `{output_dir}/{cell.output}` as PNG bytes returned from `_render_single`.
+    A `results.json` is written alongside with per-cell timings.
+    """
+    import json as _json
+    from datetime import datetime as _dt
+
+    spec_path = Path(spec_path)
+    if not spec_path.exists():
+        raise FileNotFoundError(f"spec file not found: {spec_path}")
+
+    with open(spec_path) as f:
+        spec = _json.load(f)
+
+    input_path = Path(spec["input_path"])
+    if not input_path.exists():
+        raise FileNotFoundError(f"input image not found: {input_path}")
+
+    image_bytes = input_path.read_bytes()
+    output_dir = Path(spec["output_dir"])
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    cells = spec["cells"]
+    common = spec.get("common", {})
+    seed = common.get("seed", 42)
+    steps = common.get("steps", 40)
+    sampler_name = common.get("sampler_name", "euler")
+    scheduler = common.get("scheduler", "simple")
+    use_fp8 = common.get("use_fp8", True)
+    use_lightning_lora = common.get("use_lightning_lora", False)
+
+    print(f"[TruRender v7 sweep] input: {input_path} ({len(image_bytes)} bytes)")
+    print(f"[TruRender v7 sweep] output_dir: {output_dir}")
+    print(f"[TruRender v7 sweep] cells: {len(cells)}")
+    print(f"[TruRender v7 sweep] common: seed={seed} steps={steps} "
+          f"sampler={sampler_name}/{scheduler} fp8={use_fp8} lightning={use_lightning_lora}")
+
+    # Instantiate the class ONCE — keeps the warm ComfyUI server alive across cells
+    service = TruRenderQwen()
+
+    sweep_start = time.time()
+    results = []
+    for i, cell in enumerate(cells, 1):
+        code = cell["code"]
+        out_name = cell.get("output", f"{code}.png")
+        out_path = output_dir / out_name
+        positive = cell["positive"]
+        cfg = cell.get("cfg", 4.0)
+        negative = cell.get("negative", None)
+
+        print(f"\n=== cell {i}/{len(cells)}: {code} (cfg={cfg}) ===")
+        cell_start = time.time()
+        try:
+            output_bytes, render_elapsed = service._render_single.remote(
+                image_bytes,
+                seed=seed,
+                steps=steps,
+                cfg=cfg,
+                sampler_name=sampler_name,
+                scheduler=scheduler,
+                use_fp8=use_fp8,
+                use_lightning_lora=use_lightning_lora,
+                positive=positive,
+                negative=negative,
+            )
+            out_path.write_bytes(output_bytes)
+            wall = time.time() - cell_start
+            ok = True
+            err = None
+            print(f"[TruRender v7 sweep] ✓ {code}: render={render_elapsed:.1f}s wall={wall:.1f}s "
+                  f"→ {out_path} ({len(output_bytes)} bytes)")
+        except Exception as e:
+            wall = time.time() - cell_start
+            ok = False
+            err = repr(e)
+            print(f"[TruRender v7 sweep] ✗ {code}: FAILED after {wall:.1f}s — {err}")
+
+        results.append({
+            "code": code,
+            "output": out_name,
+            "cfg": cfg,
+            "ok": ok,
+            "wall_s": wall,
+            "render_s": (render_elapsed if ok else None),
+            "size_bytes": (out_path.stat().st_size if out_path.exists() else 0),
+            "error": err,
+        })
+
+    total_sweep_s = time.time() - sweep_start
+    ok_count = sum(1 for r in results if r["ok"])
+
+    manifest = {
+        "spec_path": str(spec_path),
+        "input_path": str(input_path),
+        "output_dir": str(output_dir),
+        "common": {"seed": seed, "steps": steps, "sampler_name": sampler_name,
+                   "scheduler": scheduler, "use_fp8": use_fp8,
+                   "use_lightning_lora": use_lightning_lora},
+        "finished_at": _dt.now().astimezone().isoformat(timespec="seconds"),
+        "total_sweep_s": total_sweep_s,
+        "ok_count": ok_count,
+        "fail_count": len(results) - ok_count,
+        "results": results,
+    }
+    manifest_path = output_dir / "results_manifest.json"
+    with open(manifest_path, "w") as f:
+        _json.dump(manifest, f, indent=2)
+
+    print(f"\n[TruRender v7 sweep] DONE — {ok_count}/{len(results)} ok, "
+          f"{total_sweep_s:.1f}s total")
+    print(f"[TruRender v7 sweep] manifest: {manifest_path}")
 
 
 @app.local_entrypoint()
