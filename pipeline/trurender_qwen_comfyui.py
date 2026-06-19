@@ -1,5 +1,5 @@
 """
-TruRender v7.0 — Qwen-Image-Edit-2511 pipeline (edit-first paradigm).
+TruRender v7.2 — Qwen-Image-Edit-2511 pipeline (edit-first paradigm).
 
 Replaces v6's Flux1-dev + depth/canny ControlNet stack with Qwen-Image-Edit-2511,
 an instruction-based edit model. The Enscape render is treated as an EDIT target:
@@ -19,22 +19,34 @@ Architecture (matches Comfy-Org's official image_qwen_image_edit_2511.json):
             → VAEDecode → SaveImage
 
 Aspect preservation: Python-computed dimensions (Pillow) → EmptySD3LatentImage.
-Output dimensions match the input aspect ratio at a ~1MP bucket, snapped to
+Output dimensions match the input aspect ratio at a ~2MP bucket, snapped to
 multiples of 16. This replaces v6's ImageScale-to-1024x1024 (which stretched
 16:9 input ~22% horizontally) and Quinn's original FluxKontextImageScale
-(a BFL custom node we explicitly avoid).
+(a BFL custom node we explicitly avoid). 2MP is the smallest target that
+suppresses the right-edge hallucination bug Qwen-Image-Edit shows on 16:9
+input at ~1MP; see v7.1 release notes.
+
+Production entrypoints:
+  - `render(input_path, output_path=None, seed=DEFAULT_SEED, ...)` — single image.
+  - `render_options(input_path, output_dir=None, num_options=5, anchor_seed=DEFAULT_SEED, ...)`
+    — N seed-variation options in one warm Modal container. This is the end-user
+    "give me options" path: 5 renders per run, first at DEFAULT_SEED (1234, the
+    v7.2 chosen hero), next 4 at random seeds. Cost is ~$0.55 + $0.03 per option.
+  - `sweep(spec_path)` — JSON-spec parameter sweep (for internal probing).
 
 Models staged on the existing trurender-model-cache volume (shared with v6):
   - qwen_image_edit_2511_fp8mixed.safetensors  (~20GB, default — cost lever)
-  - qwen_image_edit_2511_bf16.safetensors      (~41GB, set use_fp8=False)
   - qwen_2.5_vl_7b_fp8_scaled.safetensors      (~9GB,  text+vision encoder)
   - qwen_image_vae.safetensors                  (~242MB)
   - Qwen-Image-Edit-2511-Lightning-4steps-V1.0-bf16.safetensors (~810MB, optional)
   - qwen_image_depth_diffsynth_controlnet.safetensors (~2GB, optional backstop, NOT wired)
+  - (bf16 weights ~41GB intentionally NOT staged; v7.1 probe showed fp8mixed
+    is a wash vs bf16 with ~15% speed penalty. See MODEL_SPECS comment.)
 
 Deploy:    cd pipeline && /Users/doxa/Library/Python/3.9/bin/modal deploy trurender_qwen_comfyui.py
 Models:    cd pipeline && /Users/doxa/Library/Python/3.9/bin/modal run trurender_qwen_comfyui.py::download_models
 Render:    cd pipeline && /Users/doxa/Library/Python/3.9/bin/modal run trurender_qwen_comfyui.py::render --input-path /path/to/enscape.png
+Options:   cd pipeline && /Users/doxa/Library/Python/3.9/bin/modal run trurender_qwen_comfyui.py::render_options --input-path /path/to/enscape.png --num-options 5
 """
 
 import modal
@@ -72,11 +84,8 @@ DEFAULT_POSITIVE = (
 )
 
 DEFAULT_NEGATIVE = (
-    "3d render, CGI, computer-generated, video game graphics, cartoon, "
-    "illustration, painting, plastic or waxy surfaces, perfectly uniform "
-    "textures, oversaturated colors, extreme HDR, neon, fantasy lighting, "
-    "changed layout, moved or added or removed furniture, distorted geometry, "
-    "warped lines, text, watermark, signature"
+    "3D render, plastic surfaces, distorted geometry, text, watermark, "
+    "added furniture"
 )
 
 
@@ -84,12 +93,23 @@ DEFAULT_NEGATIVE = (
 # Model file names (must match what download_models stages on the volume)
 # ---------------------------------------------------------------------------
 
-DIFFUSION_BF16 = "qwen_image_edit_2511_bf16.safetensors"
+DIFFUSION_BF16 = "qwen_image_edit_2511_bf16.safetensors"  # noqa: kept for reference; not staged by default
 DIFFUSION_FP8 = "qwen_image_edit_2511_fp8mixed.safetensors"   # ~20GB cost lever (default)
 TEXT_ENCODER = "qwen_2.5_vl_7b_fp8_scaled.safetensors"
 VAE = "qwen_image_vae.safetensors"
 LIGHTNING_LORA = "Qwen-Image-Edit-2511-Lightning-4steps-V1.0-bf16.safetensors"
 DEPTH_DIFFSYNTH_BACKSTOP = "qwen_image_depth_diffsynth_controlnet.safetensors"  # TODO: depth backstop
+
+# ---------------------------------------------------------------------------
+# Default seed (anchor for the "5 options per run" production path)
+# ---------------------------------------------------------------------------
+# Seed 1234 was selected as the v7.2 default after the seed variation trial
+# (outputs/seed_trial/ on 2026-06-18, 4 cells: 1, 7, 100, 1234). It was the only
+# cell with a clearly visible blue sky through the right windows, the most
+# "shippable bright daylight" render in the set, and the only seed in the trial
+# whose exposure balance read as intentional rather than lucky. End users get
+# this seed as the first option, then 4 random seeds as variations.
+DEFAULT_SEED = 1234
 
 
 # ---------------------------------------------------------------------------
@@ -369,11 +389,19 @@ MODEL_SPECS = [
         "filename": "split_files/diffusion_models/qwen_image_edit_2511_fp8mixed.safetensors",
         "dest": "qwen_models/unet",
     },
-    # NOTE: bf16 weights (~41GB) intentionally NOT staged by default. The brief
-    # lists exactly 5 models and fp8mixed is the default quality. To enable bf16
-    # later, set UNETLoader's unet_name to qwen_image_edit_2511_bf16.safetensors
-    # and add the file to MODEL_SPECS. Quality difference vs fp8mixed is
-    # negligible; cost difference is ~2x VRAM.
+    # NOTE: bf16 weights (~41GB) intentionally NOT staged by default. fp8mixed is
+    # the production default; the BF16 sub-agent's 2026-06-18 probe showed
+    # fp8mixed is functionally a wash vs BF16 on this model (TR/TL ratio
+    # 0.41 vs 0.42, perceptually interchangeable, 15% slower on BF16). The
+    # ~$0.30 download + 5 min redeploy is not worth the dormant precision.
+    # To re-enable: add the entry below and the matching symlink in
+    # TruRenderQwen._setup_model_links(), then redeploy the Modal app.
+    #
+    #   {"name": "qwen_image_edit_2511_bf16.safetensors",
+    #    "repo": "Comfy-Org/Qwen-Image-Edit_ComfyUI",
+    #    "filename": "split_files/diffusion_models/qwen_image_edit_2511_bf16.safetensors",
+    #    "dest": "qwen_models/unet"},
+    #
     # Qwen2.5-VL text+vision encoder
     {
         "name": "qwen_2.5_vl_7b_fp8_scaled.safetensors",
@@ -781,6 +809,8 @@ class TruRenderQwen:
                        target_width: int = None, target_height: int = None,
                        steps: int = 40, cfg: float = 4.0,
                        sampler_name: str = "euler", scheduler: str = "simple",
+                       model_sampling_shift: float = 3.1,
+                       cfgnorm_strength: float = 1.0,
                        use_fp8: bool = True,
                        use_lightning_lora: bool = False,
                        output_format: str = "png",
@@ -819,7 +849,8 @@ class TruRenderQwen:
         fp8_str = "fp8" if use_fp8 else "bf16"
         lora_str = f" | lora@1.0" if use_lightning_lora else ""
         print(f"[TruRender v7] Input: {src_w}x{src_h} → Output: {target_width}x{target_height} | "
-              f"steps={steps} cfg={cfg} {fp8_str}{lora_str} | seed={seed}")
+              f"steps={steps} cfg={cfg} shift={model_sampling_shift} cfgnorm={cfgnorm_strength} "
+              f"{fp8_str}{lora_str} | seed={seed}")
         print(f"[TruRender v7] positive prompt len: {len(positive_prompt)} chars "
               f"({'custom' if positive is not None else 'DEFAULT'})")
 
@@ -839,6 +870,8 @@ class TruRenderQwen:
             cfg=cfg,
             sampler_name=sampler_name,
             scheduler=scheduler,
+            model_sampling_shift=model_sampling_shift,
+            cfgnorm_strength=cfgnorm_strength,
             use_fp8=use_fp8,
             use_lightning_lora=use_lightning_lora,
             filename_prefix=f"trurender_v7_{client_id[:8]}",
@@ -866,7 +899,7 @@ class TruRenderQwen:
 def render(
     input_path: str,
     output_path: str = None,
-    seed: int = 42,
+    seed: int = DEFAULT_SEED,
     steps: int = 40,
     cfg: float = 4.0,
     use_fp8: bool = True,
@@ -912,6 +945,119 @@ def render(
 
     output_path.write_bytes(output_bytes)
     print(f"[TruRender v7] ✓ Rendered in {elapsed:.1f}s → {output_path} ({len(output_bytes)} bytes)")
+
+
+@app.local_entrypoint(name="render_options")
+def render_options(
+    input_path: str,
+    output_dir: str = None,
+    num_options: int = 5,
+    anchor_seed: int = DEFAULT_SEED,
+    steps: int = 40,
+    cfg: float = 4.0,
+    use_fp8: bool = True,
+    use_lightning_lora: bool = False,
+    positive: str = None,
+    negative: str = None,
+):
+    """Render N seed-variation options in ONE warm Modal container (production entrypoint).
+
+    This is the end-user "give me options" path. Generates `num_options`
+    independent renders of the same input image, each at a different seed, and
+    writes them to `output_dir/{input_stem}_opt_{i}.png` (1-indexed).
+
+    The first option always uses `anchor_seed` (default DEFAULT_SEED = 1234, the
+    v7.2 chosen hero seed). Remaining options use random seeds sampled with
+    `random.randint(0, 2**31 - 1)`. The seed list is printed at startup so it's
+    reproducible if the user re-runs with the same inputs.
+
+    All options are rendered sequentially within a single warm container
+    (cold-start amortized across N renders — same pattern as `sweep()`). Cost
+    is ~$0.55 + $0.03 per option at v7.1 2MP on A100-80GB.
+
+    Usage:
+        modal run trurender_qwen_comfyui.py::render_options \\
+            --input-path /path/to/enscape.png \\
+            --output-dir /path/to/outputs \\
+            --num-options 5
+
+    Add `--positive` or `--negative` to override the default prompts for
+    A/B-style prompt-vs-prompt comparisons; otherwise the v7 hardcoded
+    DEFAULT_POSITIVE/DEFAULT_NEGATIVE are used (the 6-item trimmed negative
+    is the v7.2 default; the 100-word blocklist has been retired).
+
+    Returns the list of written output paths.
+    """
+    import json as _json
+    import random as _random
+    from datetime import datetime as _dt
+
+    input_path = Path(input_path)
+    if not input_path.exists():
+        raise FileNotFoundError(f"Input file not found: {input_path}")
+
+    if output_dir is None:
+        ts = _dt.now().strftime("%Y%m%d_%H%M%S")
+        output_dir = Path(f"/tmp/trurender_v7_options_{ts}")
+    else:
+        output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    image_bytes = input_path.read_bytes()
+    print(f"[TruRender v7 render_options] Local: read {len(image_bytes)} bytes from {input_path}")
+    print(f"[TruRender v7 render_options] Output dir: {output_dir}")
+    print(f"[TruRender v7 render_options] num_options={num_options} anchor_seed={anchor_seed}")
+
+    # Build the seed list: anchor first, then num_options-1 random.
+    seeds = [anchor_seed] + [_random.randint(0, 2**31 - 1) for _ in range(num_options - 1)]
+    print(f"[TruRender v7 render_options] seeds: {seeds}")
+
+    service = TruRenderQwen()
+    stem = input_path.stem
+    written = []
+    started = time.time()
+    for i, seed in enumerate(seeds, start=1):
+        out_name = f"{stem}_opt_{i:02d}_seed{seed}.png"
+        out_path = output_dir / out_name
+        cell_start = time.time()
+        try:
+            output_bytes, render_elapsed = service._render_single.remote(
+                image_bytes,
+                seed=seed,
+                steps=steps,
+                cfg=cfg,
+                use_fp8=use_fp8,
+                use_lightning_lora=use_lightning_lora,
+                positive=positive,
+                negative=negative,
+            )
+            out_path.write_bytes(output_bytes)
+            wall = time.time() - cell_start
+            print(f"[TruRender v7 render_options] {i}/{num_options} seed={seed} "
+                  f"render={render_elapsed:.1f}s wall={wall:.1f}s -> {out_path} "
+                  f"({len(output_bytes)} bytes)")
+            written.append(str(out_path))
+        except Exception as e:
+            print(f"[TruRender v7 render_options] {i}/{num_options} seed={seed} FAILED: {e}")
+            raise
+
+    total = time.time() - started
+    # Write a manifest of the seed list + paths so the run is reproducible
+    manifest = {
+        "input_path": str(input_path),
+        "output_dir": str(output_dir),
+        "num_options": num_options,
+        "anchor_seed": anchor_seed,
+        "seeds": seeds,
+        "outputs": written,
+        "elapsed_s": total,
+    }
+    manifest_path = output_dir / f"{stem}_options_manifest.json"
+    manifest_path.write_text(_json.dumps(manifest, indent=2))
+    print(f"[TruRender v7 render_options] ✓ {num_options} options in {total:.1f}s "
+          f"({total / num_options:.1f}s/option avg) -> {output_dir}")
+    print(f"[TruRender v7 render_options] manifest: {manifest_path}")
+    return written
 
 
 @app.local_entrypoint(name="sweep")
@@ -985,20 +1131,41 @@ def sweep(
         out_name = cell.get("output", f"{code}.png")
         out_path = output_dir / out_name
         positive = cell["positive"]
-        cfg = cell.get("cfg", 4.0)
+        # Per-cell overrides — fall back to common block, then hard defaults.
+        # Fixes the BF16 sub-agent's reported bug: `cfg = cell.get("cfg", 4.0)`
+        # did not honor spec.common.cfg. Apply the same fallback pattern to every
+        # common-kwarg pass.
+        cfg = cell.get("cfg", common.get("cfg", 4.0))
         negative = cell.get("negative", None)
+        # Per-cell seed override (falls back to common.seed). Fixes seed-variation
+        # trial pattern (S-1, S-7, S-100, S-1234) where each cell needs its own
+        # seed within a single warm container.
+        cell_seed = cell.get("seed", common.get("seed", 42))
+        cell_steps = cell.get("steps", common.get("steps", 40))
+        cell_sampler_name = cell.get("sampler_name", common.get("sampler_name", "euler"))
+        cell_scheduler = cell.get("scheduler", common.get("scheduler", "simple"))
+        cell_use_fp8 = cell.get("use_fp8", common.get("use_fp8", True))
+        cell_model_sampling_shift = cell.get("model_sampling_shift",
+                                             common.get("model_sampling_shift", 3.1))
+        cell_cfgnorm_strength = cell.get("cfgnorm_strength",
+                                          common.get("cfgnorm_strength", 1.0))
 
-        print(f"\n=== cell {i}/{len(cells)}: {code} (cfg={cfg}) ===")
+        print(f"\n=== cell {i}/{len(cells)}: {code} (seed={cell_seed} cfg={cfg} "
+              f"steps={cell_steps} {cell_sampler_name}/{cell_scheduler} "
+              f"fp8={cell_use_fp8} shift={cell_model_sampling_shift} "
+              f"cfgnorm={cell_cfgnorm_strength}) ===")
         cell_start = time.time()
         try:
             output_bytes, render_elapsed = service._render_single.remote(
                 image_bytes,
-                seed=seed,
-                steps=steps,
+                seed=cell_seed,
+                steps=cell_steps,
                 cfg=cfg,
-                sampler_name=sampler_name,
-                scheduler=scheduler,
-                use_fp8=use_fp8,
+                sampler_name=cell_sampler_name,
+                scheduler=cell_scheduler,
+                model_sampling_shift=cell_model_sampling_shift,
+                cfgnorm_strength=cell_cfgnorm_strength,
+                use_fp8=cell_use_fp8,
                 use_lightning_lora=use_lightning_lora,
                 positive=positive,
                 negative=negative,
@@ -1018,7 +1185,14 @@ def sweep(
         results.append({
             "code": code,
             "output": out_name,
+            "seed": cell_seed,
             "cfg": cfg,
+            "steps": cell_steps,
+            "sampler_name": cell_sampler_name,
+            "scheduler": cell_scheduler,
+            "model_sampling_shift": cell_model_sampling_shift,
+            "cfgnorm_strength": cell_cfgnorm_strength,
+            "use_fp8": cell_use_fp8,
             "ok": ok,
             "wall_s": wall,
             "render_s": (render_elapsed if ok else None),
