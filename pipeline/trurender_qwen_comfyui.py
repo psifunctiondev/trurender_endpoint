@@ -1187,13 +1187,18 @@ class TruRenderQwen:
         filename = f"trurender_v7_input_{client_id[:8]}.png"
         uploaded_name = self._upload_image(image_bytes, filename)
 
-        # v7.4: optionally upload + wire a style reference image
-        uploaded_style_name = style_image_name  # may be pre-set by caller
-        if style_image_bytes is not None and not uploaded_style_name:
+        # v7.4: optionally upload + wire a style reference image.
+        # bytes win over name — if bytes are provided, we always upload them
+        # and ignore the caller-supplied name. This is because ComfyUI's
+        # LoadImage node can only load files from its input dir; a name
+        # pointing at a non-existent file is rejected with HTTP 400.
+        if style_image_bytes is not None:
             style_filename = f"trurender_v7_style_{client_id[:8]}.jpg"
             uploaded_style_name = self._upload_image(style_image_bytes, style_filename)
             print(f"[TruRender v7.4] style image uploaded: {uploaded_style_name} "
                   f"({len(style_image_bytes)} bytes)")
+        else:
+            uploaded_style_name = style_image_name  # may be None (v7.3 BASE)
 
         # Build and submit workflow
         workflow = build_workflow(
