@@ -1,0 +1,153 @@
+{
+  "trial": {
+    "cells": [
+      {
+        "code": "S-1",
+        "output": "S-1.png",
+        "seed": 1,
+        "cfg": 4.0,
+        "steps": 40,
+        "sampler_name": "euler",
+        "scheduler": "simple",
+        "model_sampling_shift": 3.1,
+        "cfgnorm_strength": 1.0,
+        "use_fp8": true,
+        "ok": true,
+        "wall_s": 207.2825539112091,
+        "render_s": 178.73808693885803,
+        "size_bytes": 2068825,
+        "error": null,
+        "tl_std": 16.19141387939453,
+        "tr_std": 2.7615699768066406,
+        "bl_std": 53.693214416503906,
+        "br_std": 14.351227760314941,
+        "tr_tl": 0.17055767935875332,
+        "dims": [
+          1920,
+          1072
+        ],
+        "size_kb": 2020
+      },
+      {
+        "code": "S-7",
+        "output": "S-7.png",
+        "seed": 7,
+        "cfg": 4.0,
+        "steps": 40,
+        "sampler_name": "euler",
+        "scheduler": "simple",
+        "model_sampling_shift": 3.1,
+        "cfgnorm_strength": 1.0,
+        "use_fp8": true,
+        "ok": true,
+        "wall_s": 159.70960092544556,
+        "render_s": 158.28467679023743,
+        "size_bytes": 2032292,
+        "error": null,
+        "tl_std": 12.378100395202637,
+        "tr_std": 3.994176149368286,
+        "bl_std": 67.84542846679688,
+        "br_std": 17.77079200744629,
+        "tr_tl": 0.322680865548344,
+        "dims": [
+          1920,
+          1072
+        ],
+        "size_kb": 1984
+      },
+      {
+        "code": "S-100",
+        "output": "S-100.png",
+        "seed": 100,
+        "cfg": 4.0,
+        "steps": 40,
+        "sampler_name": "euler",
+        "scheduler": "simple",
+        "model_sampling_shift": 3.1,
+        "cfgnorm_strength": 1.0,
+        "use_fp8": true,
+        "ok": true,
+        "wall_s": 178.58053922653198,
+        "render_s": 176.75413346290588,
+        "size_bytes": 2069105,
+        "error": null,
+        "tl_std": 8.781375885009766,
+        "tr_std": 4.7574944496154785,
+        "bl_std": 57.389530181884766,
+        "br_std": 13.45210075378418,
+        "tr_tl": 0.54177096071434,
+        "dims": [
+          1920,
+          1072
+        ],
+        "size_kb": 2020
+      },
+      {
+        "code": "S-1234",
+        "output": "S-1234.png",
+        "seed": 1234,
+        "cfg": 4.0,
+        "steps": 40,
+        "sampler_name": "euler",
+        "scheduler": "simple",
+        "model_sampling_shift": 3.1,
+        "cfgnorm_strength": 1.0,
+        "use_fp8": true,
+        "ok": true,
+        "wall_s": 157.46011209487915,
+        "render_s": 156.1519889831543,
+        "size_bytes": 2075764,
+        "error": null,
+        "tl_std": 10.699663162231445,
+        "tr_std": 4.039299011230469,
+        "bl_std": 55.67483901977539,
+        "br_std": 8.463570594787598,
+        "tr_tl": 0.3775164647695378,
+        "dims": [
+          1920,
+          1072
+        ],
+        "size_kb": 2027
+      }
+    ],
+    "common": {
+      "seed": 42,
+      "steps": 40,
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "use_fp8": true,
+      "use_lightning_lora": false
+    },
+    "metric": "100x100 corner R-channel std-dev (R extracted from RGB; np.std of patch)",
+    "spec_path": "/Users/doxa/.openclaw/workspace/trurender_endpoint/outputs/seed_trial/spec.json"
+  },
+  "reference": {
+    "code": "BASE",
+    "output": "BASE.png",
+    "seed": 42,
+    "cfg": 4.0,
+    "steps": 40,
+    "sampler_name": "euler",
+    "scheduler": "simple",
+    "model_sampling_shift": 3.1,
+    "cfgnorm_strength": 1.0,
+    "use_fp8": true,
+    "ok": true,
+    "wall_s": null,
+    "render_s": null,
+    "size_bytes": 2069702,
+    "tl_std": 20.77522850036621,
+    "tr_std": 7.043483257293701,
+    "bl_std": 56.021728515625,
+    "br_std": 16.395694732666016,
+    "tr_tl": 0.33903276958756645,
+    "dims": [
+      1920,
+      1072
+    ],
+    "size_kb": 2021,
+    "note": "v7_tier_b BASE reference (shift=3.1, seed=42) \u2014 same metric, included for comparison",
+    "source_path": "/Users/doxa/.openclaw/workspace/trurender_endpoint/outputs/v7_tier_b/BASE.png",
+    "source_metrics_path": "/Users/doxa/.openclaw/workspace/trurender_endpoint/outputs/v7_tier_b/metrics.json"
+  }
+}

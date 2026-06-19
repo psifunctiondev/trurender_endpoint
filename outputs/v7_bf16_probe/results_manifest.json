@@ -1,0 +1,47 @@
+{
+  "spec_path": "/Users/doxa/.openclaw/workspace/trurender_endpoint/outputs/v7_bf16_probe/spec.json",
+  "input_path": "/Users/doxa/.openclaw/workspace/trurender_endpoint/inputs/enscape_input.png",
+  "output_dir": "/Users/doxa/.openclaw/workspace/trurender_endpoint/outputs/v7_bf16_probe",
+  "common": {
+    "seed": 42,
+    "steps": 40,
+    "sampler_name": "euler",
+    "scheduler": "simple",
+    "use_fp8": true,
+    "use_lightning_lora": false
+  },
+  "finished_at": "2026-06-18T17:31:40-04:00",
+  "total_sweep_s": 452.6699321269989,
+  "ok_count": 2,
+  "fail_count": 0,
+  "results": [
+    {
+      "code": "BASE",
+      "output": "BASE.png",
+      "cfg": 4.0,
+      "steps": 40,
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "use_fp8": true,
+      "ok": true,
+      "wall_s": 238.69158816337585,
+      "render_s": 183.28225541114807,
+      "size_bytes": 2069702,
+      "error": null
+    },
+    {
+      "code": "BF16",
+      "output": "BF16.png",
+      "cfg": 4.0,
+      "steps": 40,
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "use_fp8": false,
+      "ok": true,
+      "wall_s": 213.97815704345703,
+      "render_s": 211.90155029296875,
+      "size_bytes": 2096731,
+      "error": null
+    }
+  ]
+}

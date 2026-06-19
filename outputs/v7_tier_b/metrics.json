@@ -1,0 +1,97 @@
+{
+  "patch_size": 100,
+  "channel": "R",
+  "metric": "TR std-dev / TL std-dev of 100x100 corner patches",
+  "results": {
+    "BASE": {
+      "tr_r_std": 7.043,
+      "tl_r_std": 20.775,
+      "tr_tl_ratio": 0.339,
+      "patch_size": 100,
+      "image_w": 1920,
+      "image_h": 1072,
+      "size_bytes": 2069702,
+      "size_kb": 2021.2
+    },
+    "MS-2.5": {
+      "tr_r_std": 8.417,
+      "tl_r_std": 20.24,
+      "tr_tl_ratio": 0.4159,
+      "patch_size": 100,
+      "image_w": 1920,
+      "image_h": 1072,
+      "size_bytes": 2060166,
+      "size_kb": 2011.9
+    },
+    "MS-4.0": {
+      "tr_r_std": 7.528,
+      "tl_r_std": 20.378,
+      "tr_tl_ratio": 0.3694,
+      "patch_size": 100,
+      "image_w": 1920,
+      "image_h": 1072,
+      "size_bytes": 2073528,
+      "size_kb": 2024.9
+    },
+    "MS-5.0": {
+      "tr_r_std": 7.273,
+      "tl_r_std": 20.906,
+      "tr_tl_ratio": 0.3479,
+      "patch_size": 100,
+      "image_w": 1920,
+      "image_h": 1072,
+      "size_bytes": 2078175,
+      "size_kb": 2029.5
+    },
+    "CN-0.5": {
+      "tr_r_std": 3.387,
+      "tl_r_std": 3.37,
+      "tr_tl_ratio": 1.0053,
+      "patch_size": 100,
+      "image_w": 1920,
+      "image_h": 1072,
+      "size_bytes": 2336117,
+      "size_kb": 2281.4
+    },
+    "CN-1.5": {
+      "tr_r_std": 0.067,
+      "tl_r_std": 0.052,
+      "tr_tl_ratio": 1.291,
+      "patch_size": 100,
+      "image_w": 1920,
+      "image_h": 1072,
+      "size_bytes": 382482,
+      "size_kb": 373.5
+    },
+    "AS-uni": {
+      "tr_r_std": 7.899,
+      "tl_r_std": 20.402,
+      "tr_tl_ratio": 0.3872,
+      "patch_size": 100,
+      "image_w": 1920,
+      "image_h": 1072,
+      "size_bytes": 2073249,
+      "size_kb": 2024.7
+    },
+    "AS-sde": {
+      "tr_r_std": 3.813,
+      "tl_r_std": 13.161,
+      "tr_tl_ratio": 0.2897,
+      "patch_size": 100,
+      "image_w": 1920,
+      "image_h": 1072,
+      "size_bytes": 1994577,
+      "size_kb": 1947.8
+    },
+    "NP-trim": {
+      "tr_r_std": 8.681,
+      "tl_r_std": 24.42,
+      "tr_tl_ratio": 0.3555,
+      "patch_size": 100,
+      "image_w": 1920,
+      "image_h": 1072,
+      "size_bytes": 2164752,
+      "size_kb": 2114.0
+    }
+  }
+}

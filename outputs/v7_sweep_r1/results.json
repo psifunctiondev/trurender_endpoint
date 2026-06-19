@@ -1,0 +1,114 @@
+{
+  "trial": "v7_sweep_r1",
+  "input_image": "/Users/doxa/.openclaw/workspace/trurender_endpoint/inputs/enscape_input.png",
+  "input_dimensions": [
+    1920,
+    1080
+  ],
+  "rendered_at_finished": "2026-06-18T12:26:42-04:00",
+  "wall_time_s": 1012.0814728736877,
+  "total_render_s": 956.8139753341675,
+  "cost_usd_estimate": 0.6644541495376164,
+  "prng_seed": 71,
+  "results": {
+    "FC": {
+      "prompt": "P1",
+      "cfg": 3.5,
+      "seed": 42,
+      "ok": true,
+      "size_bytes": 1051061,
+      "std": 53.85993803392833,
+      "error": null,
+      "render_s": 126.97959113121033,
+      "wall_s": 163.15458798408508
+    },
+    "LY": {
+      "prompt": "P1",
+      "cfg": 4.0,
+      "seed": 42,
+      "ok": true,
+      "size_bytes": 1057418,
+      "std": 53.226128431213525,
+      "error": null,
+      "render_s": 98.31712627410889,
+      "wall_s": 100.59525203704834
+    },
+    "34": {
+      "prompt": "P1",
+      "cfg": 5.0,
+      "seed": 42,
+      "ok": true,
+      "size_bytes": 1087098,
+      "std": 52.63271100788008,
+      "error": null,
+      "render_s": 98.58167695999146,
+      "wall_s": 100.37765502929688
+    },
+    "AS": {
+      "prompt": "P2",
+      "cfg": 3.5,
+      "seed": 42,
+      "ok": true,
+      "size_bytes": 1053017,
+      "std": 52.90717707969584,
+      "error": null,
+      "render_s": 98.19907593727112,
+      "wall_s": 99.74243211746216
+    },
+    "PO": {
+      "prompt": "P2",
+      "cfg": 4.0,
+      "seed": 42,
+      "ok": true,
+      "size_bytes": 1057059,
+      "std": 52.63000498719876,
+      "error": null,
+      "render_s": 118.32495450973511,
+      "wall_s": 119.8557960987091
+    },
+    "4D": {
+      "prompt": "P2",
+      "cfg": 5.0,
+      "seed": 42,
+      "ok": true,
+      "size_bytes": 1070420,
+      "std": 51.32095389680166,
+      "error": null,
+      "render_s": 104.10696983337402,
+      "wall_s": 105.36567687988281
+    },
+    "JC": {
+      "prompt": "P3",
+      "cfg": 3.5,
+      "seed": 42,
+      "ok": true,
+      "size_bytes": 1016952,
+      "std": 52.48235990752062,
+      "error": null,
+      "render_s": 104.10351037979126,
+      "wall_s": 105.51422595977783
+    },
+    "PS": {
+      "prompt": "P3",
+      "cfg": 4.0,
+      "seed": 42,
+      "ok": true,
+      "size_bytes": 1025582,
+      "std": 52.054413568897,
+      "error": null,
+      "render_s": 104.09750247001648,
+      "wall_s": 105.6743221282959
+    },
+    "TB": {
+      "prompt": "P3",
+      "cfg": 5.0,
+      "seed": 42,
+      "ok": true,
+      "size_bytes": 1032618,
+      "std": 51.23055532997583,
+      "error": null,
+      "render_s": 104.10356783866882,
+      "wall_s": 105.10035395622253
+    }
+  }
+}

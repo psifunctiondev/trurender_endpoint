@@ -1,0 +1,24 @@
+{
+  "trial": "v7_diag_borders",
+  "control_cell": "AS (from v7_sweep_r1, P2/cfg3.5/seed42)",
+  "hypothesis": "right-border hallucination is aspect-ratio-driven, not pixel-count",
+  "renders": {
+    "square.png": {
+      "dims": [1024, 1024],
+      "forced_aspect": "1:1",
+      "tr_std_topright_100": 1.10,
+      "tl_std_topleft_100": 5.41,
+      "verdict": "fully suppressed (TR std matches input corner baseline of ~1.0)"
+    },
+    "hi_mp.png": {
+      "dims": [1920, 1072],
+      "forced_aspect": "16:9",
+      "tr_std_topright_100": 7.33,
+      "tl_std_topleft_100": 10.71,
+      "verdict": "partial fix (3x better than control, but still 2x input baseline)"
+    }
+  },
+  "control_tr_std": 22.96,
+  "input_source_tr_std": 3.68,
+  "conclusion": "aspect-ratio is the primary driver; pixel count is secondary. Rendering at square dims fixes the bug but warps geometry. Need a fix that preserves 16:9 output aspect."
+}

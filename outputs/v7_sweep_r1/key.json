@@ -1,0 +1,84 @@
+{
+  "trial": "v7_sweep_r1",
+  "input_image": "/Users/doxa/.openclaw/workspace/trurender_endpoint/inputs/enscape_input.png",
+  "input_dimensions": [
+    1920,
+    1080
+  ],
+  "rendered_at": "2026-06-18T12:09:50-04:00",
+  "default_seed": 42,
+  "default_steps": 40,
+  "default_resolution": "1MP (Python-computed, aspect-preserved, multiples of 16)",
+  "default_pipeline": {
+    "use_fp8": true,
+    "use_lightning_lora": false,
+    "denoise": 1.0,
+    "shift": 3.1,
+    "cfgnorm_strength": 1.0,
+    "sampler_name": "euler",
+    "scheduler": "simple",
+    "depth_backstop": "NOT WIRED (DiffSynth controlnet staged on volume but not in graph)"
+  },
+  "prng_seed": 71,
+  "prompts": {
+    "P1": "Turn this 3D architectural rendering into a photorealistic interior photograph. Preserve the exact room layout, camera angle, and perspective, and keep every element in the scene in identical positions, shapes, proportions, and colors: all walls, windows and mullions, cabinetry, countertops, the kitchen island, appliances, pendant lights, dining table, chairs, plants, and all decor. Do not add, remove, relocate, resize, or restyle any object, and do not change any material or finish. Change ONLY the rendering quality to that of a real photograph: physically accurate natural daylight from the windows with soft directional shadows and gentle falloff; true material microtexture (visible wood grain, natural stone veining in the marble, fabric weave on the upholstery, brushed and polished metal on the hardware and faucet, real glass with subtle reflections and slight impurity, plaster walls with faint surface variation); realistic global illumination and contact shadows; and authentic camera optics and color response. Hasselblad medium-format quality, photographed for Architectural Digest, indistinguishable from a real photo.",
+    "P2": "Turn this 3D architectural rendering into a real photograph. Preserve the exact room layout, camera angle, and every object in its current position. Render with physically accurate daylight, real material textures, and natural camera optics. Indistinguishable from a real photo.",
+    "P3": "Turn this 3D architectural rendering into a contemporary interior photograph for Dwell magazine. Preserve the exact room layout, camera angle, and every object in its current position, shape, and color. Render with clean, controlled natural daylight, restrained color palette, true material microtexture (visible wood grain, natural stone, brushed metal, real fabric weave), and quiet shadow detail. Modern minimalist aesthetic \u2014 honest materials, considered composition, the discipline of a well-edited contemporary interior. Indistinguishable from a real photo."
+  },
+  "cells": {
+    "FC": {
+      "prompt": "P1",
+      "cfg": 3.5,
+      "seed": 42,
+      "output": "FC.png"
+    },
+    "LY": {
+      "prompt": "P1",
+      "cfg": 4.0,
+      "seed": 42,
+      "output": "LY.png"
+    },
+    "34": {
+      "prompt": "P1",
+      "cfg": 5.0,
+      "seed": 42,
+      "output": "34.png"
+    },
+    "AS": {
+      "prompt": "P2",
+      "cfg": 3.5,
+      "seed": 42,
+      "output": "AS.png"
+    },
+    "PO": {
+      "prompt": "P2",
+      "cfg": 4.0,
+      "seed": 42,
+      "output": "PO.png"
+    },
+    "4D": {
+      "prompt": "P2",
+      "cfg": 5.0,
+      "seed": 42,
+      "output": "4D.png"
+    },
+    "JC": {
+      "prompt": "P3",
+      "cfg": 3.5,
+      "seed": 42,
+      "output": "JC.png"
+    },
+    "PS": {
+      "prompt": "P3",
+      "cfg": 4.0,
+      "seed": 42,
+      "output": "PS.png"
+    },
+    "TB": {
+      "prompt": "P3",
+      "cfg": 5.0,
+      "seed": 42,
+      "output": "TB.png"
+    }
+  }
+}

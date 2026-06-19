@@ -1,0 +1,83 @@
+{
+  "spec_path": "/Users/doxa/.openclaw/workspace/trurender_endpoint/outputs/wide_shift/spec.json",
+  "input_path": "/Users/doxa/.openclaw/workspace/trurender_endpoint/inputs/enscape_input.png",
+  "output_dir": "/Users/doxa/.openclaw/workspace/trurender_endpoint/outputs/wide_shift",
+  "common": {
+    "seed": 42,
+    "steps": 40,
+    "sampler_name": "euler",
+    "scheduler": "simple",
+    "use_fp8": true,
+    "use_lightning_lora": false
+  },
+  "finished_at": "2026-06-18T19:01:16-04:00",
+  "total_sweep_s": 634.9326379299164,
+  "ok_count": 4,
+  "fail_count": 0,
+  "results": [
+    {
+      "code": "SH-1.0",
+      "output": "SH-1.0.png",
+      "cfg": 4.0,
+      "steps": 40,
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "model_sampling_shift": 1.0,
+      "cfgnorm_strength": 1.0,
+      "use_fp8": true,
+      "ok": true,
+      "wall_s": 204.19425415992737,
+      "render_s": 170.70488786697388,
+      "size_bytes": 2081768,
+      "error": null
+    },
+    {
+      "code": "SH-2.0",
+      "output": "SH-2.0.png",
+      "cfg": 4.0,
+      "steps": 40,
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "model_sampling_shift": 2.0,
+      "cfgnorm_strength": 1.0,
+      "use_fp8": true,
+      "ok": true,
+      "wall_s": 143.42297673225403,
+      "render_s": 142.31879115104675,
+      "size_bytes": 2054355,
+      "error": null
+    },
+    {
+      "code": "SH-6.0",
+      "output": "SH-6.0.png",
+      "cfg": 4.0,
+      "steps": 40,
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "model_sampling_shift": 6.0,
+      "cfgnorm_strength": 1.0,
+      "use_fp8": true,
+      "ok": true,
+      "wall_s": 143.545556306839,
+      "render_s": 142.20641922950745,
+      "size_bytes": 2083835,
+      "error": null
+    },
+    {
+      "code": "SH-8.0",
+      "output": "SH-8.0.png",
+      "cfg": 4.0,
+      "steps": 40,
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "model_sampling_shift": 8.0,
+      "cfgnorm_strength": 1.0,
+      "use_fp8": true,
+      "ok": true,
+      "wall_s": 143.76947712898254,
+      "render_s": 142.20659470558167,
+      "size_bytes": 2077981,
+      "error": null
+    }
+  ]
+}

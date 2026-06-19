@@ -1,0 +1,109 @@
+{
+  "spec_path": "/tmp/v7_sweep_r1_spec.json",
+  "input_path": "/Users/doxa/.openclaw/workspace/trurender_endpoint/inputs/enscape_input.png",
+  "output_dir": "/Users/doxa/.openclaw/workspace/trurender_endpoint/outputs/v7_sweep_r1",
+  "common": {
+    "seed": 42,
+    "steps": 40,
+    "sampler_name": "euler",
+    "scheduler": "simple",
+    "use_fp8": true,
+    "use_lightning_lora": false
+  },
+  "finished_at": "2026-06-18T12:26:37-04:00",
+  "total_sweep_s": 1005.3815369606018,
+  "ok_count": 9,
+  "fail_count": 0,
+  "results": [
+    {
+      "code": "FC",
+      "output": "FC.png",
+      "cfg": 3.5,
+      "ok": true,
+      "wall_s": 163.15458798408508,
+      "render_s": 126.97959113121033,
+      "size_bytes": 1051061,
+      "error": null
+    },
+    {
+      "code": "LY",
+      "output": "LY.png",
+      "cfg": 4.0,
+      "ok": true,
+      "wall_s": 100.59525203704834,
+      "render_s": 98.31712627410889,
+      "size_bytes": 1057418,
+      "error": null
+    },
+    {
+      "code": "34",
+      "output": "34.png",
+      "cfg": 5.0,
+      "ok": true,
+      "wall_s": 100.37765502929688,
+      "render_s": 98.58167695999146,
+      "size_bytes": 1087098,
+      "error": null
+    },
+    {
+      "code": "AS",
+      "output": "AS.png",
+      "cfg": 3.5,
+      "ok": true,
+      "wall_s": 99.74243211746216,
+      "render_s": 98.19907593727112,
+      "size_bytes": 1053017,
+      "error": null
+    },
+    {
+      "code": "PO",
+      "output": "PO.png",
+      "cfg": 4.0,
+      "ok": true,
+      "wall_s": 119.8557960987091,
+      "render_s": 118.32495450973511,
+      "size_bytes": 1057059,
+      "error": null
+    },
+    {
+      "code": "4D",
+      "output": "4D.png",
+      "cfg": 5.0,
+      "ok": true,
+      "wall_s": 105.36567687988281,
+      "render_s": 104.10696983337402,
+      "size_bytes": 1070420,
+      "error": null
+    },
+    {
+      "code": "JC",
+      "output": "JC.png",
+      "cfg": 3.5,
+      "ok": true,
+      "wall_s": 105.51422595977783,
+      "render_s": 104.10351037979126,
+      "size_bytes": 1016952,
+      "error": null
+    },
+    {
+      "code": "PS",
+      "output": "PS.png",
+      "cfg": 4.0,
+      "ok": true,
+      "wall_s": 105.6743221282959,
+      "render_s": 104.09750247001648,
+      "size_bytes": 1025582,
+      "error": null
+    },
+    {
+      "code": "TB",
+      "output": "TB.png",
+      "cfg": 5.0,
+      "ok": true,
+      "wall_s": 105.10035395622253,
+      "render_s": 104.10356783866882,
+      "size_bytes": 1032618,
+      "error": null
+    }
+  ]
+}

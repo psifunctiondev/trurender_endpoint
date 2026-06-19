@@ -1,0 +1,42 @@
+{
+  "input_path": "/Users/doxa/.openclaw/workspace/trurender_endpoint/inputs/enscape_input.png",
+  "output_dir": "/Users/doxa/.openclaw/workspace/trurender_endpoint/outputs/v7_1_probes",
+  "common": {
+    "seed": 42,
+    "steps": 40,
+    "sampler_name": "euler",
+    "scheduler": "simple",
+    "use_fp8": true,
+    "use_lightning_lora": false
+  },
+  "cells": [
+    {
+      "code": "BASE",
+      "output": "BASE.png",
+      "cfg": 3.5,
+      "positive": "Turn this 3D architectural rendering into a real photograph. Preserve the exact room layout, camera angle, and every object in its current position. Render with physically accurate daylight, real material textures, and natural camera optics. Indistinguishable from a real photo."
+    },
+    {
+      "code": "SAMPLER",
+      "output": "SAMPLER.png",
+      "cfg": 3.5,
+      "sampler_name": "dpmpp_2m",
+      "scheduler": "karras",
+      "positive": "Turn this 3D architectural rendering into a real photograph. Preserve the exact room layout, camera angle, and every object in its current position. Render with physically accurate daylight, real material textures, and natural camera optics. Indistinguishable from a real photo."
+    },
+    {
+      "code": "STEP60",
+      "output": "STEP60.png",
+      "cfg": 3.5,
+      "steps": 60,
+      "positive": "Turn this 3D architectural rendering into a real photograph. Preserve the exact room layout, camera angle, and every object in its current position. Render with physically accurate daylight, real material textures, and natural camera optics. Indistinguishable from a real photo."
+    },
+    {
+      "code": "BF16",
+      "output": "BF16.png",
+      "cfg": 3.5,
+      "use_fp8": false,
+      "positive": "Turn this 3D architectural rendering into a real photograph. Preserve the exact room layout, camera angle, and every object in its current position. Render with physically accurate daylight, real material textures, and natural camera optics. Indistinguishable from a real photo."
+    }
+  ]
+}

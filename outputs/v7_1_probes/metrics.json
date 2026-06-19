@@ -1,0 +1,101 @@
+{
+  "rows": [
+    {
+      "code": "BASE",
+      "output": "BASE.png",
+      "cfg": 3.5,
+      "steps": 40,
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "use_fp8": true,
+      "ok": true,
+      "wall_s": 203.9565498828888,
+      "render_s": 178.90001273155212,
+      "size_bytes": 2035636,
+      "error": null,
+      "tl_std": 25.344398498535156,
+      "tr_std": 40.90934753417969,
+      "bl_std": 55.01667022705078,
+      "br_std": 51.10783004760742,
+      "tr_tl": 1.614137638206097,
+      "dims": [
+        1920,
+        1072
+      ]
+    },
+    {
+      "code": "SAMPLER",
+      "output": "SAMPLER.png",
+      "cfg": 3.5,
+      "steps": 40,
+      "sampler_name": "dpmpp_2m",
+      "scheduler": "karras",
+      "use_fp8": true,
+      "ok": true,
+      "wall_s": 179.1124541759491,
+      "render_s": 176.5319311618805,
+      "size_bytes": 1958425,
+      "error": null,
+      "tl_std": 28.359743118286133,
+      "tr_std": 38.27607727050781,
+      "bl_std": 46.32169723510742,
+      "br_std": 47.024757385253906,
+      "tr_tl": 1.349662340411952,
+      "dims": [
+        1920,
+        1072
+      ]
+    },
+    {
+      "code": "STEP60",
+      "output": "STEP60.png",
+      "cfg": 3.5,
+      "steps": 60,
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "use_fp8": true,
+      "ok": true,
+      "wall_s": 256.75925302505493,
+      "render_s": 253.54340052604675,
+      "size_bytes": 2044965,
+      "error": null,
+      "tl_std": 26.284391403198242,
+      "tr_std": 42.00695037841797,
+      "bl_std": 56.2069091796875,
+      "br_std": 51.62287139892578,
+      "tr_tl": 1.598170934758894,
+      "dims": [
+        1920,
+        1072
+      ]
+    },
+    {
+      "code": "BF16",
+      "output": "BF16.png",
+      "cfg": 3.5,
+      "steps": 40,
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "use_fp8": false,
+      "ok": false,
+      "wall_s": 1.5513191223144531,
+      "render_s": null,
+      "size_bytes": 0,
+      "error": "ExecutionError('Could not deserialize remote exception due to local error:\\nEncountered an error when deserializing an object in the local environment (see above for details).\\nThis can happen if your local environment does not have the remote exception definitions.\\nHere is the remote traceback:\\nTraceback (most recent call last):\\n  File \"/pkg/modal/_runtime/container_io_manager.py\", line 946, in handle_input_exception\\n    yield\\n  File \"/pkg/modal/_container_entrypoint.py\", line 172, in run_input_sync\\n    values = io_context.call_function_sync()\\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\\n  File \"/pkg/modal/_runtime/container_io_manager.py\", line 225, in call_function_sync\\n    expected_value_or_values = self.finalized_function.callable(*args, **kwargs)\\n                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\\n  File \"/root/trurender_qwen_comfyui.py\", line 847, in _render_single\\n    prompt_id = self._queue_prompt(workflow, client_id)\\n                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\\n  File \"/root/trurender_qwen_comfyui.py\", line 662, in _queue_prompt\\n    resp = urllib.request.urlopen(req)\\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^\\n  File \"/usr/local/lib/python3.11/urllib/request.py\", line 216, in urlopen\\n    return opener.open(url, data, timeout)\\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\\n  File \"/usr/local/lib/python3.11/urllib/request.py\", line 525, in open\\n    response = meth(req, response)\\n               ^^^^^^^^^^^^^^^^^^^\\n  File \"/usr/local/lib/python3.11/urllib/request.py\", line 634, in http_response\\n    response = self.parent.error(\\n               ^^^^^^^^^^^^^^^^^^\\n  File \"/usr/local/lib/python3.11/urllib/request.py\", line 563, in error\\n    return self._call_chain(*args)\\n           ^^^^^^^^^^^^^^^^^^^^^^^\\n  File \"/usr/local/lib/python3.11/urllib/request.py\", line 496, in _call_chain\\n    result = func(*args)\\n             ^^^^^^^^^^^\\n  File \"/usr/local/lib/python3.11/urllib/request.py\", line 643, in http_error_default\\n    raise HTTPError(req.full_url, code, msg, hdrs, fp)\\nurllib.error.HTTPError: HTTP Error 400: Bad Request\\n')",
+      "tl_std": null,
+      "tr_std": null,
+      "bl_std": null,
+      "br_std": null,
+      "tr_tl": null,
+      "dims": null
+    }
+  ],
+  "common": {
+    "seed": 42,
+    "steps": 40,
+    "sampler_name": "euler",
+    "scheduler": "simple",
+    "use_fp8": true,
+    "use_lightning_lora": false
+  }
+}

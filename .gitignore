@@ -1,7 +1,17 @@
-# Large render outputs — don't track in git
-outputs/*.png
-outputs/*.jpg
-inputs/*.png
-inputs/*.jpg
+# Modal server logs (left behind by `modal serve` runs in foreground)
+.server.log
+.server.err
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
+# macOS
 .DS_Store
-preview/
+
+# Virtualenv
+venv/
+.venv/
+env/

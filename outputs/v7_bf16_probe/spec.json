@@ -1,0 +1,18 @@
+{
+  "input_path": "/Users/doxa/.openclaw/workspace/trurender_endpoint/inputs/enscape_input.png",
+  "output_dir": "/Users/doxa/.openclaw/workspace/trurender_endpoint/outputs/v7_bf16_probe",
+  "common": {"seed": 42, "cfg": 3.5},
+  "cells": [
+    {
+      "code": "BASE",
+      "output": "BASE.png",
+      "positive": "Turn this 3D architectural rendering into a real photograph. Preserve the exact room layout, camera angle, and every object in its current position. Render with physically accurate daylight, real material textures, and natural camera optics. Indistinguishable from a real photo."
+    },
+    {
+      "code": "BF16",
+      "output": "BF16.png",
+      "positive": "Turn this 3D architectural rendering into a real photograph. Preserve the exact room layout, camera angle, and every object in its current position. Render with physically accurate daylight, real material textures, and natural camera optics. Indistinguishable from a real photo.",
+      "use_fp8": false
+    }
+  ]
+}

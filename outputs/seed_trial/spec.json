@@ -1,0 +1,20 @@
+{
+  "input_path": "/Users/doxa/.openclaw/workspace/trurender_endpoint/inputs/enscape_input.png",
+  "output_dir": "/Users/doxa/.openclaw/workspace/trurender_endpoint/outputs/seed_trial",
+  "common": {
+    "steps": 40,
+    "cfg": 4.0,
+    "sampler_name": "euler",
+    "scheduler": "simple",
+    "model_sampling_shift": 3.1,
+    "cfgnorm_strength": 1.0,
+    "use_fp8": true,
+    "use_lightning_lora": false
+  },
+  "cells": [
+    {"code": "S-1",    "output": "S-1.png",    "seed": 1,    "positive": "Turn this 3D architectural rendering into a real photograph. Preserve the exact room layout, camera angle, and every object in its current position. Render with physically accurate daylight, real material textures, and natural camera optics. Indistinguishable from a real photo."},
+    {"code": "S-7",    "output": "S-7.png",    "seed": 7,    "positive": "Turn this 3D architectural rendering into a real photograph. Preserve the exact room layout, camera angle, and every object in its current position. Render with physically accurate daylight, real material textures, and natural camera optics. Indistinguishable from a real photo."},
+    {"code": "S-100",  "output": "S-100.png",  "seed": 100,  "positive": "Turn this 3D architectural rendering into a real photograph. Preserve the exact room layout, camera angle, and every object in its current position. Render with physically accurate daylight, real material textures, and natural camera optics. Indistinguishable from a real photo."},
+    {"code": "S-1234", "output": "S-1234.png", "seed": 1234, "positive": "Turn this 3D architectural rendering into a real photograph. Preserve the exact room layout, camera angle, and every object in its current position. Render with physically accurate daylight, real material textures, and natural camera optics. Indistinguishable from a real photo."}
+  ]
+}
