@@ -1,0 +1,69 @@
+{
+  "probe": "v7.4",
+  "input_image": "/Users/doxa/.openclaw/workspace/trurender_endpoint/inputs/enscape_input.png",
+  "space_type": "kitchen",
+  "picked": {
+    "filename": "Locke-Feature-scaled.jpg",
+    "source": "canonical",
+    "score": 1.275,
+    "tags": [
+      "interior",
+      "kitchen",
+      "living",
+      "contemporary",
+      "daylight",
+      "warm"
+    ],
+    "weight": 0.85,
+    "local_path": "/Users/doxa/.openclaw/workspace/trurender_endpoint/assets/trurender/style-refs/Locke-Feature-scaled.jpg",
+    "why": "ref=Locke-Feature-scaled.jpg (canonical) score=1.275 | top_tag_contribs: kitchen=0.850, living=0.425 | space_type=kitchen matched against 18 refs"
+  },
+  "scored_candidates": [
+    {
+      "filename": "Locke-Feature-scaled.jpg",
+      "source": "canonical",
+      "score": 1.275
+    },
+    {
+      "filename": "Modern-Loft-After.jpg",
+      "source": "canonical",
+      "score": 1.2000000000000002
+    },
+    {
+      "filename": "12-Farm-scaled.jpg",
+      "source": "canonical",
+      "score": 1.2000000000000002
+    },
+    {
+      "filename": "7-min-scaled.jpg",
+      "source": "canonical",
+      "score": 1.2000000000000002
+    },
+    {
+      "filename": "south-end-townhouse-8.jpg",
+      "source": "canonical",
+      "score": 1.0499999999999998
+    },
+    {
+      "filename": "style_ref_3_kitchen.jpg",
+      "source": "catherine",
+      "score": 1.0
+    }
+  ],
+  "tag_weights_table": {
+    "kitchen": 1.0,
+    "living": 0.5,
+    "dining": 0.5,
+    "bath": 0.2,
+    "entry": 0.3,
+    "exterior": 0.1,
+    "office": 0.2
+  },
+  "catherine_picks_available": [
+    "style_ref_1_library.jpg",
+    "style_ref_2_staircase.jpg",
+    "style_ref_3_kitchen.jpg"
+  ],
+  "all_refs_count": 19,
+  "notes": "Smart selector unified 16 canonical CTAI refs (local) + 3 Catherine picks (Modal volume). For 'kitchen', the canonical set wins (no Catherine pick scored higher; the highest Catherine pick would have been style_ref_3_kitchen.jpg with score 1.0 = 1.0 * 1.0 from the kitchen tag, but Locke-Feature-scaled.jpg scores 1.275 with both kitchen=0.85 AND living=0.425 contributions)."
+}
