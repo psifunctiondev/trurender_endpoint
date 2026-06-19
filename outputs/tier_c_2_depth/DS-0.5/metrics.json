@@ -1,0 +1,10 @@
+{
+  "tr_r_std": 6.435,
+  "tl_r_std": 21.008,
+  "tr_tl_ratio": 0.3063,
+  "patch_size": 100,
+  "image_w": 1920,
+  "image_h": 1072,
+  "size_bytes": 2090295,
+  "size_kb": 2041.3
+}

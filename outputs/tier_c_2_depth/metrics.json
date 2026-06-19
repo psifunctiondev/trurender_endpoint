@@ -1,0 +1,57 @@
+{
+  "patch_size": 100,
+  "channel": "R",
+  "metric": "TR std-dev / TL std-dev of 100x100 corner patches",
+  "results": {
+    "P2-anchor (v7_tier_b/BASE)": {
+      "tr_r_std": 7.043,
+      "tl_r_std": 20.775,
+      "tr_tl_ratio": 0.339,
+      "patch_size": 100,
+      "image_w": 1920,
+      "image_h": 1072,
+      "size_bytes": 2069702,
+      "size_kb": 2021.2
+    },
+    "CTRL (depth=0.0)": {
+      "tr_r_std": 8.681,
+      "tl_r_std": 24.42,
+      "tr_tl_ratio": 0.3555,
+      "patch_size": 100,
+      "image_w": 1920,
+      "image_h": 1072,
+      "size_bytes": 2164752,
+      "size_kb": 2114.0
+    },
+    "DS-0.3": {
+      "tr_r_std": 3.799,
+      "tl_r_std": 25.54,
+      "tr_tl_ratio": 0.1487,
+      "patch_size": 100,
+      "image_w": 1920,
+      "image_h": 1072,
+      "size_bytes": 2119881,
+      "size_kb": 2070.2
+    },
+    "DS-0.5": {
+      "tr_r_std": 6.435,
+      "tl_r_std": 21.008,
+      "tr_tl_ratio": 0.3063,
+      "patch_size": 100,
+      "image_w": 1920,
+      "image_h": 1072,
+      "size_bytes": 2090295,
+      "size_kb": 2041.3
+    },
+    "DS-0.7": {
+      "tr_r_std": 6.075,
+      "tl_r_std": 19.958,
+      "tr_tl_ratio": 0.3044,
+      "patch_size": 100,
+      "image_w": 1920,
+      "image_h": 1072,
+      "size_bytes": 2098430,
+      "size_kb": 2049.2
+    }
+  }
+}

@@ -98,7 +98,9 @@ DIFFUSION_FP8 = "qwen_image_edit_2511_fp8mixed.safetensors"   # ~20GB cost lever
 TEXT_ENCODER = "qwen_2.5_vl_7b_fp8_scaled.safetensors"
 VAE = "qwen_image_vae.safetensors"
 LIGHTNING_LORA = "Qwen-Image-Edit-2511-Lightning-4steps-V1.0-bf16.safetensors"
-DEPTH_DIFFSYNTH_BACKSTOP = "qwen_image_depth_diffsynth_controlnet.safetensors"  # TODO: depth backstop
+DEPTH_DIFFSYNTH_CONTROLNET = "qwen_image_depth_diffsynth_controlnet.safetensors"  # DiffSynth depth ControlNet (~2.11 GB, optional backstop)
+DEPTH_ANYTHING_MODEL = "depth_anything_vitl14.pth"  # Used by DepthAnythingPreprocessor
+# v6 trurender_comfyui.py stages the same depth_anything_vitl14.pth on the volume
 
 # ---------------------------------------------------------------------------
 # Default seed (anchor for the "5 options per run" production path)
@@ -174,6 +176,15 @@ def build_workflow(image_name: str = "enscape_input.png",
                    # Cost / speed levers:
                    use_fp8: bool = True,
                    use_lightning_lora: bool = False,
+                   # Optional DiffSynth depth ControlNet backstop (Tier C #2, v7.3+):
+                   # Default 0.3 (v7.3 production) — applies the DiffSynth depth
+                   # ControlNet at strength 0.3, validated as the noise-reduction
+                   # sweet spot (-56% right-edge TR/TL noise vs v7.2 baseline).
+                   # Set to 0.0 to disable (preserves v7.2 behavior bit-identically).
+                   # Range matches the QwenImageDiffsynthControlnet node: -10.0 to 10.0,
+                   # practical range 0.0-1.0. Negative strengths subtract the depth
+                   # signal (rarely useful, but supported for A/B experiments).
+                   depth_strength: float = 0.3,
                    filename_prefix: str = "trurender_qwen") -> dict:
     """Return an API-format ComfyUI prompt graph (dict keyed by node id).
 
@@ -184,6 +195,15 @@ def build_workflow(image_name: str = "enscape_input.png",
     With use_fp8=True (default) the fp8mixed weights are loaded (~20GB, fits
     A100-80GB with room for the 9GB text encoder; negligible quality loss).
     Set use_fp8=False for the bf16 weights (~41GB).
+
+    With depth_strength > 0 (default 0.3 in v7.3), a DiffSynth Qwen-Image-Depth
+    ControlNet is loaded (qwen_image_depth_diffsynth_controlnet.safetensors,
+    ~2.11 GB) and inserted into the model chain between the last
+    model-conditioning node (CFGNorm or Lightning LoRA) and the KSampler. The
+    ControlNet's image input is the source Enscape render — DiffSynth's
+    control net handles its own internal depth extraction from that image.
+    depth_strength=0.0 disables the backstop (preserves v7.2 behavior
+    bit-identically, no new nodes are inserted).
     """
     unet = DIFFUSION_FP8 if use_fp8 else DIFFUSION_BF16
 
@@ -248,6 +268,38 @@ def build_workflow(image_name: str = "enscape_input.png",
             "_meta": {"title": "Lightning 4-step LoRA (preview only)"},
         }
         model_ref = ["20", 0]
+
+    # Optional DiffSynth depth ControlNet (Tier C #2 backstop, v7.3+ default).
+    # When depth_strength > 0, we add two nodes:
+    #   30: ModelPatchLoader — loads qwen_image_depth_diffsynth_controlnet.safetensors
+    #   33: QwenImageDiffsynthControlnet — applies the depth patch to the model
+    # The patched model replaces model_ref for the KSampler.
+    # depth_strength=0.0 skips this block entirely (preserves v7.2 behavior
+    # bit-identically). v7.3 default is 0.3, validated 2026-06-19.
+    if depth_strength > 0:
+        g["30"] = {
+            "inputs": {"name": DEPTH_DIFFSYNTH_CONTROLNET},
+            "class_type": "ModelPatchLoader",
+            "_meta": {"title": "Load DiffSynth Depth ControlNet"},
+        }
+        g["33"] = {
+            "inputs": {
+                "model": model_ref,
+                "model_patch": ["30", 0],
+                "vae": ["5", 0],
+                # The ControlNet's image input is the source Enscape render.
+                # DiffSynth's Qwen-Image-Depth control net extracts its own
+                # depth features internally from this RGB image — no external
+                # preprocessor is required (QwenImageDiffsynthControlnet's
+                # implementation handles the VAE encoding and the patch
+                # conditioning inside the node).
+                "image": ["1", 0],
+                "strength": float(depth_strength),
+            },
+            "class_type": "QwenImageDiffsynthControlnet",
+            "_meta": {"title": f"Apply DiffSynth Depth ControlNet (strength={depth_strength})"},
+        }
+        model_ref = ["33", 0]
 
     # 8/9: TextEncodeQwenImageEditPlus — the edit-model's encode node.
     # image1 carries the source render's pixels (read by Qwen2.5-VL encoder
@@ -575,7 +627,7 @@ class TruRenderQwen:
             if missing:
                 print(f"[TruRender v7] WARNING: missing essential nodes: {missing}")
             else:
-                print(f"[TruRender v7] ✓ All essential nodes present (including TextEncodeQwenImageEditPlus)")
+                print("[TruRender v7] ✓ All essential nodes present (including TextEncodeQwenImageEditPlus)")
         except Exception as e:
             print(f"[TruRender v7] Could not query node info: {e}")
 
@@ -610,7 +662,7 @@ class TruRenderQwen:
         for src, dst in links.items():
             if not os.path.exists(src):
                 print(f"[TruRender v7] WARNING: Model not found: {src}")
-                print(f"[TruRender v7]   Run: modal run trurender_qwen_comfyui.py::download_models")
+                print("[TruRender v7]   Run: modal run trurender_qwen_comfyui.py::download_models")
                 continue
             os.makedirs(os.path.dirname(dst), exist_ok=True)
             if os.path.exists(dst) or os.path.islink(dst):
@@ -802,7 +854,7 @@ class TruRenderQwen:
             print(f"[TruRender v7] Warmup complete in {total:.1f}s (render: {elapsed:.1f}s). All models loaded into VRAM.")
         except Exception as e:
             print(f"[TruRender v7] Warmup failed: {e}")
-            print(f"[TruRender v7] First real render will be slow (model loading).")
+            print("[TruRender v7] First real render will be slow (model loading).")
 
     @modal.method()
     def _render_single(self, image_bytes: bytes, seed: int = 42,
@@ -813,6 +865,7 @@ class TruRenderQwen:
                        cfgnorm_strength: float = 1.0,
                        use_fp8: bool = True,
                        use_lightning_lora: bool = False,
+                       depth_strength: float = 0.3,
                        output_format: str = "png",
                        positive: str = None,
                        negative: str = None) -> tuple:
@@ -830,6 +883,12 @@ class TruRenderQwen:
         (the v7 hardcoded defaults) are used. These were made into kwargs so the
         local `render` entrypoint can override them for parameter sweeps without
         touching build_workflow internals (which stay at the documented defaults).
+
+        depth_strength (default 0.3 in v7.3) is the optional DiffSynth depth
+        ControlNet backstop, validated 2026-06-19. 0.0 = OFF, preserves v7.2
+        behavior bit-identically. 0.3 = the noise-reduction sweet spot (-56%
+        right-edge TR/TL noise vs v7.2 baseline). Range: -10.0 to 10.0 (matches
+        QwenImageDiffsynthControlnet node's range). Practical range 0.0-1.0.
         """
         from PIL import Image as PILImage
         start = time.time()
@@ -847,10 +906,11 @@ class TruRenderQwen:
         src_img = PILImage.open(io.BytesIO(image_bytes))
         src_w, src_h = src_img.size
         fp8_str = "fp8" if use_fp8 else "bf16"
-        lora_str = f" | lora@1.0" if use_lightning_lora else ""
+        lora_str = " | lora@1.0" if use_lightning_lora else ""
+        depth_str = f" | depth@{depth_strength}" if depth_strength > 0 else ""
         print(f"[TruRender v7] Input: {src_w}x{src_h} → Output: {target_width}x{target_height} | "
               f"steps={steps} cfg={cfg} shift={model_sampling_shift} cfgnorm={cfgnorm_strength} "
-              f"{fp8_str}{lora_str} | seed={seed}")
+              f"{fp8_str}{lora_str}{depth_str} | seed={seed}")
         print(f"[TruRender v7] positive prompt len: {len(positive_prompt)} chars "
               f"({'custom' if positive is not None else 'DEFAULT'})")
 
@@ -874,6 +934,7 @@ class TruRenderQwen:
             cfgnorm_strength=cfgnorm_strength,
             use_fp8=use_fp8,
             use_lightning_lora=use_lightning_lora,
+            depth_strength=depth_strength,
             filename_prefix=f"trurender_v7_{client_id[:8]}",
         )
 
@@ -904,6 +965,7 @@ def render(
     cfg: float = 4.0,
     use_fp8: bool = True,
     use_lightning_lora: bool = False,
+    depth_strength: float = 0.3,
     target_width: int = None,
     target_height: int = None,
     positive: str = None,
@@ -915,10 +977,14 @@ def render(
         modal run trurender_qwen_comfyui.py::render --input-path /path/to/enscape.png
         modal run trurender_qwen_comfyui.py::render --input-path /path/to/enscape.png --output-path out.png --seed 1234
         modal run trurender_qwen_comfyui.py::render --input-path ... --positive "..." --cfg 3.5 --seed 42
+        modal run trurender_qwen_comfyui.py::render --input-path ... --depth-strength 0.0   # disable v7.3 backstop
 
     By default, the v7 hardcoded DEFAULT_POSITIVE/DEFAULT_NEGATIVE are used. Pass
     --positive / --negative to override (used by parameter sweeps). When passing
     --positive from a shell, use single quotes; the CLI forwards verbatim.
+
+    depth_strength (default 0.3 in v7.3) is the DiffSynth depth ControlNet
+    backstop. Pass --depth-strength 0.0 to disable (preserves v7.2 behavior).
     """
     from datetime import datetime
 
@@ -940,6 +1006,7 @@ def render(
     output_bytes, elapsed = TruRenderQwen()._render_single.remote(
         image_bytes, seed=seed, target_width=target_width, target_height=target_height,
         steps=steps, cfg=cfg, use_fp8=use_fp8, use_lightning_lora=use_lightning_lora,
+        depth_strength=depth_strength,
         positive=positive, negative=negative,
     )
 
@@ -957,6 +1024,7 @@ def render_options(
     cfg: float = 4.0,
     use_fp8: bool = True,
     use_lightning_lora: bool = False,
+    depth_strength: float = 0.3,
     positive: str = None,
     negative: str = None,
 ):
@@ -985,6 +1053,10 @@ def render_options(
     A/B-style prompt-vs-prompt comparisons; otherwise the v7 hardcoded
     DEFAULT_POSITIVE/DEFAULT_NEGATIVE are used (the 6-item trimmed negative
     is the v7.2 default; the 100-word blocklist has been retired).
+
+    Pass --depth-strength 0.0 to disable the v7.3 backstop (preserves v7.2
+    behavior bit-identically). Default 0.3 applies the validated
+    noise-reduction ControlNet.
 
     Returns the list of written output paths.
     """
@@ -1028,6 +1100,7 @@ def render_options(
                 cfg=cfg,
                 use_fp8=use_fp8,
                 use_lightning_lora=use_lightning_lora,
+                depth_strength=depth_strength,
                 positive=positive,
                 negative=negative,
             )
@@ -1114,12 +1187,14 @@ def sweep(
     scheduler = common.get("scheduler", "simple")
     use_fp8 = common.get("use_fp8", True)
     use_lightning_lora = common.get("use_lightning_lora", False)
+    common_depth_strength = common.get("depth_strength", 0.3)
 
     print(f"[TruRender v7 sweep] input: {input_path} ({len(image_bytes)} bytes)")
     print(f"[TruRender v7 sweep] output_dir: {output_dir}")
     print(f"[TruRender v7 sweep] cells: {len(cells)}")
     print(f"[TruRender v7 sweep] common: seed={seed} steps={steps} "
-          f"sampler={sampler_name}/{scheduler} fp8={use_fp8} lightning={use_lightning_lora}")
+          f"sampler={sampler_name}/{scheduler} fp8={use_fp8} lightning={use_lightning_lora} "
+          f"depth_strength={common_depth_strength}")
 
     # Instantiate the class ONCE — keeps the warm ComfyUI server alive across cells
     service = TruRenderQwen()
@@ -1149,11 +1224,13 @@ def sweep(
                                              common.get("model_sampling_shift", 3.1))
         cell_cfgnorm_strength = cell.get("cfgnorm_strength",
                                           common.get("cfgnorm_strength", 1.0))
+        cell_depth_strength = cell.get("depth_strength",
+                                        common.get("depth_strength", 0.3))
 
         print(f"\n=== cell {i}/{len(cells)}: {code} (seed={cell_seed} cfg={cfg} "
               f"steps={cell_steps} {cell_sampler_name}/{cell_scheduler} "
               f"fp8={cell_use_fp8} shift={cell_model_sampling_shift} "
-              f"cfgnorm={cell_cfgnorm_strength}) ===")
+              f"cfgnorm={cell_cfgnorm_strength} depth={cell_depth_strength}) ===")
         cell_start = time.time()
         try:
             output_bytes, render_elapsed = service._render_single.remote(
@@ -1167,6 +1244,7 @@ def sweep(
                 cfgnorm_strength=cell_cfgnorm_strength,
                 use_fp8=cell_use_fp8,
                 use_lightning_lora=use_lightning_lora,
+                depth_strength=cell_depth_strength,
                 positive=positive,
                 negative=negative,
             )
@@ -1193,6 +1271,7 @@ def sweep(
             "model_sampling_shift": cell_model_sampling_shift,
             "cfgnorm_strength": cell_cfgnorm_strength,
             "use_fp8": cell_use_fp8,
+            "depth_strength": cell_depth_strength,
             "ok": ok,
             "wall_s": wall,
             "render_s": (render_elapsed if ok else None),
@@ -1209,7 +1288,8 @@ def sweep(
         "output_dir": str(output_dir),
         "common": {"seed": seed, "steps": steps, "sampler_name": sampler_name,
                    "scheduler": scheduler, "use_fp8": use_fp8,
-                   "use_lightning_lora": use_lightning_lora},
+                   "use_lightning_lora": use_lightning_lora,
+                   "depth_strength": common_depth_strength},
         "finished_at": _dt.now().astimezone().isoformat(timespec="seconds"),
         "total_sweep_s": total_sweep_s,
         "ok_count": ok_count,

@@ -1,0 +1,48 @@
+{
+  "patch_size": 100,
+  "channel": "R",
+  "metric": "TR std-dev / TL std-dev of 100x100 corner patches",
+  "anchor_from": "outputs/tier_c_2_depth/DS-0.3.png (Tier C #2 probe)",
+  "results": {
+    "DS-0.1": {
+      "tr_r_std": 8.833,
+      "tl_r_std": 25.974,
+      "tr_tl_ratio": 0.3401,
+      "patch_size": 100,
+      "image_w": 1920,
+      "image_h": 1072,
+      "size_bytes": 2161770,
+      "size_kb": 2111.1
+    },
+    "DS-0.2": {
+      "tr_r_std": 6.814,
+      "tl_r_std": 25.108,
+      "tr_tl_ratio": 0.2714,
+      "patch_size": 100,
+      "image_w": 1920,
+      "image_h": 1072,
+      "size_bytes": 2140676,
+      "size_kb": 2090.5
+    },
+    "DS-0.3 (anchor)": {
+      "tr_r_std": 3.799,
+      "tl_r_std": 25.54,
+      "tr_tl_ratio": 0.1487,
+      "patch_size": 100,
+      "image_w": 1920,
+      "image_h": 1072,
+      "size_bytes": 2119881,
+      "size_kb": 2070.2
+    },
+    "DS-0.4": {
+      "tr_r_std": 6.128,
+      "tl_r_std": 23.312,
+      "tr_tl_ratio": 0.2629,
+      "patch_size": 100,
+      "image_w": 1920,
+      "image_h": 1072,
+      "size_bytes": 2096561,
+      "size_kb": 2047.4
+    }
+  }
+}

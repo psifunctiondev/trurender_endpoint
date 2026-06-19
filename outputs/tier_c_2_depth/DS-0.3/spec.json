@@ -1,0 +1,22 @@
+{
+  "cell": {
+    "code": "DS-0.3",
+    "output": "DS-0.3.png",
+    "depth_strength": 0.3,
+    "positive": "Turn this 3D architectural rendering into a real photograph. Preserve the exact room layout, camera angle, and every object in its current position. Render with physically accurate daylight, real material textures, and natural camera optics. Indistinguishable from a real photo."
+  },
+  "common": {
+    "seed": 42,
+    "steps": 40,
+    "cfg": 4.0,
+    "model_sampling_shift": 3.1,
+    "cfgnorm_strength": 1.0,
+    "sampler_name": "euler",
+    "scheduler": "simple",
+    "use_fp8": true,
+    "use_lightning_lora": false,
+    "depth_strength": 0.0,
+    "negative": "3D render, plastic surfaces, distorted geometry, text, watermark, added furniture"
+  },
+  "note": "Tier C #2 \u2014 DiffSynth depth ControlNet probe, v7.2 (depth_strength added)"
+}

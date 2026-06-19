@@ -1,0 +1,20 @@
+/Users/doxa/Library/Python/3.9/lib/python/site-packages/urllib3/__init__.py:35: NotOpenSSLWarning: urllib3 v2 only supports OpenSSL 1.1.1+, currently the 'ssl' module is compiled with 'LibreSSL 2.8.3'. See: https://github.com/urllib3/urllib3/issues/3020
+  warnings.warn(
+
+=== Tekton Vision per-cell read: DS-0.3 ===
+  POST https://psifunctiondev--tekton-vision-tektonvision-web.modal.run/v1/chat/completions (attempt 1)...
+  ok in 21.3s, 723 chars
+
+=== Tekton Vision per-cell read: DS-0.5 ===
+  POST https://psifunctiondev--tekton-vision-tektonvision-web.modal.run/v1/chat/completions (attempt 1)...
+  ok in 10.7s, 748 chars
+
+=== Tekton Vision per-cell read: DS-0.7 ===
+  POST https://psifunctiondev--tekton-vision-tektonvision-web.modal.run/v1/chat/completions (attempt 1)...
+  ok in 11.2s, 843 chars
+
+=== Tekton Vision overall read ===
+  POST https://psifunctiondev--tekton-vision-tektonvision-web.modal.run/v1/chat/completions (attempt 1)...
+  ok in 17.2s, 1399 chars
+
+Wrote /Users/doxa/.openclaw/workspace/trurender_endpoint/outputs/tier_c_2_depth/perceptual_notes.md
