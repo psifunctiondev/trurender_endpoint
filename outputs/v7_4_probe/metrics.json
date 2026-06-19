@@ -1,0 +1,58 @@
+{
+  "probe": "v7.4",
+  "input_image": "/Users/doxa/.openclaw/workspace/trurender_endpoint/inputs/enscape_input.png",
+  "wall_time_s": 454.0148751735687,
+  "ok_count": 2,
+  "fail_count": 0,
+  "cells": {
+    "BASE": {
+      "path": "/Users/doxa/.openclaw/workspace/trurender_endpoint/outputs/v7_4_probe/base.png",
+      "size_bytes": 2176810,
+      "width": 1920,
+      "height": 1072,
+      "tl_r_std": 24.602442413200514,
+      "tr_r_std": 5.189984291281835,
+      "bl_r_std": 57.69823699312799,
+      "br_r_std": 13.781459008271277,
+      "tr_over_tl_ratio": 0.21095402660091722,
+      "whole_r_std": 52.21253361822454,
+      "mae_vs_source": 45.507876956364015,
+      "rmse_vs_source": 55.32350656962095,
+      "render_s": 199.07946157455444,
+      "wall_s": 232.1110098361969,
+      "style_image_name": null
+    },
+    "IMG": {
+      "path": "/Users/doxa/.openclaw/workspace/trurender_endpoint/outputs/v7_4_probe/img_only.png",
+      "size_bytes": 1892610,
+      "width": 1920,
+      "height": 1072,
+      "tl_r_std": 11.09059823715465,
+      "tr_r_std": 3.442273062269977,
+      "bl_r_std": 66.42501155733578,
+      "br_r_std": 20.970377977049765,
+      "tr_over_tl_ratio": 0.3103775818637093,
+      "whole_r_std": 51.58569765183414,
+      "mae_vs_source": 7.840144816283168,
+      "rmse_vs_source": 17.6857912154946,
+      "render_s": 220.41418981552124,
+      "wall_s": 221.9027121067047,
+      "style_image_name": "Locke-Feature-scaled.jpg"
+    }
+  },
+  "source": {
+    "path": "/Users/doxa/.openclaw/workspace/trurender_endpoint/inputs/enscape_input.png",
+    "size_bytes": 2552813,
+    "width": 1920,
+    "height": 1080,
+    "tl_r_std": 12.485819139245578,
+    "tr_r_std": 4.550845713235682,
+    "bl_r_std": 67.22017509284886,
+    "br_r_std": 14.379814269580836,
+    "tr_over_tl_ratio": 0.3644811495732313,
+    "whole_r_std": 50.40655693920255,
+    "mae_vs_source": 0.0,
+    "rmse_vs_source": 0.0
+  },
+  "notes": "TR/TL std ratio is the v7.3 right-border-hallucination diagnostic. v7.3 baseline TR/TL was 0.68 (clean) at 2MP; v7.2 baseline was 1.18. Comparing the two cells shows the style-ref effect on border noise. MAE/RMSE measure divergence from the source Enscape render \u2014 lower = more faithful to source geometry/materials."
+}

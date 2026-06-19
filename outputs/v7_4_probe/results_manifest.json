@@ -1,0 +1,101 @@
+{
+  "probe": "trurender_v7_4_multi_image_style_transfer",
+  "version": "v7.4",
+  "date": "2026-06-19",
+  "modal_app": "trurender-qwen-comfyui",
+  "input_image": "/Users/doxa/.openclaw/workspace/trurender_endpoint/inputs/enscape_input.png",
+  "input_image_md5": "70f0c541fbfcd9cca21a531e99978023",
+  "output_dir": "outputs/v7_4_probe",
+  "git_branch": "v7-4-style-image",
+  "git_commits": [
+    "2b82cfb feat(trurender): v7.4 \u2014 multi-image style-reference conditioning (image2 wiring)",
+    "c2beb50 fix(trurender): v7.4 \u2014 read local bytes for canonical refs (ComfyUI can't fetch)",
+    "2625694 fix(trurender): v7.4 \u2014 bytes win over name in _render_single style upload"
+  ],
+  "spec_path": "outputs/v7_4_probe/spec.json",
+  "selector": {
+    "space_type": "kitchen",
+    "picked_filename": "Locke-Feature-scaled.jpg",
+    "picked_source": "canonical",
+    "picked_score": 1.275,
+    "picked_tags": [
+      "interior",
+      "kitchen",
+      "living",
+      "contemporary",
+      "daylight",
+      "warm"
+    ],
+    "all_refs_count": 19,
+    "top_3_candidates": [
+      "Locke-Feature-scaled.jpg",
+      "Modern-Loft-After.jpg",
+      "12-Farm-scaled.jpg"
+    ]
+  },
+  "cells": {
+    "BASE": {
+      "code": "BASE",
+      "output_file": "base.png",
+      "render_s": 199.07946157455444,
+      "wall_s": 232.1110098361969,
+      "size_bytes": 2176810,
+      "tr_over_tl_ratio": 0.21095402660091722,
+      "mae_vs_source": 45.507876956364015,
+      "style_image_name": null
+    },
+    "IMG": {
+      "code": "IMG",
+      "output_file": "img_only.png",
+      "render_s": 220.41418981552124,
+      "wall_s": 221.9027121067047,
+      "size_bytes": 1892610,
+      "tr_over_tl_ratio": 0.3103775818637093,
+      "mae_vs_source": 7.840144816283168,
+      "style_image_name": "Locke-Feature-scaled.jpg"
+    }
+  },
+  "comfyui_cache_hits": {
+    "BASE": [],
+    "IMG": [
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "30",
+      "10"
+    ]
+  },
+  "cost_estimate_usd": {
+    "gpu_a100_seconds": 454.0148751735687,
+    "gpu_cost": 0.5045,
+    "tekton_vision_t4_seconds": 60,
+    "tekton_vision_cost": 0.0098,
+    "total": 0.5143,
+    "hard_cap": 0.8,
+    "under_cap": true
+  },
+  "wall_time_total_s": 454.0148751735687,
+  "tekton_vision_verdict_summary": {
+    "model": "Qwen2.5-VL-7B-Instruct",
+    "endpoint": "https://psifunctiondev--tekton-vision-tektonvision-web.modal.run/v1/chat/completions",
+    "winner": "IMG (v7.4)",
+    "reason": "Tekton Vision reports both transforms preserve geometry and material identity equally well, but IMG shows clearly visible style transfer (warmer color cast, more refined material rendering, more dramatic lighting mood) that aligns with a Catherine-consistent editorial style. BASE is more neutral/plain, IMG is more polished."
+  },
+  "artifacts": {
+    "base_png": "base.png",
+    "img_png": "img_only.png",
+    "comparison_sheet_png": "comparison_sheet.png",
+    "comparison_3up_png": "comparison_3up.png",
+    "selector_output_json": "selector_output.json",
+    "metrics_json": "metrics.json",
+    "tekton_vision_verdict_md": "tekton_vision_verdict.md",
+    "tekton_vision_raw_json": "tekton_vision_raw.json",
+    "results_manifest_json": "results_manifest.json",
+    "build_artifacts_py": "build_artifacts.py"
+  },
+  "backward_compat_verified": true,
+  "stop_conditions_hit": [],
+  "verdict": "PROBE SUCCESS"
+}

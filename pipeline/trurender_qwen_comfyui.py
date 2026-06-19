@@ -1,5 +1,20 @@
 """
-TruRender v7.2 — Qwen-Image-Edit-2511 pipeline (edit-first paradigm).
+TruRender v7.4 — Qwen-Image-Edit-2511 pipeline (edit-first paradigm).
+
+v7.4 adds multi-image style-reference conditioning. The Qwen-Image-Edit-2511
+model has a second image input (image2) on its TextEncodeQwenImageEditPlus
+node that takes a style reference; the encoder sees both images and the
+model can be instructed to apply the style of Figure 2 onto Figure 1. This
+enables CTAI (Catherine-Approved) style guidance without IP-Adapter or any
+other external conditioning network.
+
+Backward compat: the style path is opt-in. `style_image_name=None` produces
+a v7.3-BASE-bit-identical workflow (one LoadImage, image1 only on both
+TextEncodeQwenImageEditPlus instances).
+
+v7.3 added the DiffSynth depth ControlNet backstop (default strength 0.3,
+validated 2026-06-19 as the noise-reduction sweet spot). v7.3 default
+positive/negative are preserved verbatim.
 
 Replaces v6's Flux1-dev + depth/canny ControlNet stack with Qwen-Image-Edit-2511,
 an instruction-based edit model. The Enscape render is treated as an EDIT target:
@@ -88,6 +103,20 @@ DEFAULT_NEGATIVE = (
     "added furniture"
 )
 
+# ---------------------------------------------------------------------------
+# v7.4: multi-image style-reference conditioning.
+# When style_image_name is set, the workflow wires a second image as
+# TextEncodeQwenImageEditPlus.image2 (the style reference). The positive
+# prompt is swapped to a "match the style of Figure 2" trigger. The
+# 6-item negative is preserved verbatim (v7.3 trim, locked).
+# ---------------------------------------------------------------------------
+
+DEFAULT_POSITIVE_STYLE = (
+    "Change the style of Figure 1 to the style of Figure 2. "
+    "Photorealistic interior photograph. Preserve exact room layout, "
+    "camera angle, and object positions. Do not change any material or finish."
+)
+
 
 # ---------------------------------------------------------------------------
 # Model file names (must match what download_models stages on the volume)
@@ -155,6 +184,199 @@ def compute_aspect_preserving_dims(image_bytes: bytes, target_megapixels: float 
 
 
 # ---------------------------------------------------------------------------
+# Smart style-ref selector (v7.4)
+# Unifies the 16 canonical CTAI refs (local assets/trurender/style-refs/) with
+# Catherine's 3 personal picks (Modal volume /models/style_references/) and
+# returns the top-1 reference for a given room type. Scoring per the
+# style-refs.json manifest: score = base_weight * tag_weights[space_type][ref_tag],
+# summed across the ref's tags. Highest score wins.
+# ---------------------------------------------------------------------------
+
+STYLE_REFS_MANIFEST_PATH = Path(__file__).resolve().parent.parent / "assets" / "trurender" / "style-refs" / "style-refs.json"
+
+# Catherine's 3 picks — hardcoded tags per brief (filenames → tags). The volume
+# copies are uploaded via pipeline/upload_style_refs.py to /models/style_references/.
+CATHERINE_PICKS = [
+    {
+        "filename": "style_ref_1_library.jpg",
+        "tags": ["interior", "library"],
+        "weight": 1.0,
+        "source": "catherine",
+        "notes": "Catherine pick #1 — library interior",
+    },
+    {
+        "filename": "style_ref_2_staircase.jpg",
+        "tags": ["interior", "entry", "stair"],
+        "weight": 1.0,
+        "source": "catherine",
+        "notes": "Catherine pick #2 — staircase / entry",
+    },
+    {
+        "filename": "style_ref_3_kitchen.jpg",
+        "tags": ["interior", "kitchen"],
+        "weight": 1.0,
+        "source": "catherine",
+        "notes": "Catherine pick #3 — kitchen",
+    },
+]
+
+
+def _load_canonical_refs() -> list:
+    """Load the 16 canonical CTAI refs from the local style-refs.json manifest.
+
+    Returns a list of dicts with keys: filename, tags, weight, source, notes,
+    local_path. local_path is the local absolute path to the JPG (sibling of
+    style-refs.json in assets/trurender/style-refs/).
+    """
+    import json as _json
+    if not STYLE_REFS_MANIFEST_PATH.exists():
+        raise FileNotFoundError(
+            f"style-refs.json manifest not found at {STYLE_REFS_MANIFEST_PATH}. "
+            "v7.4 smart selector needs the CTAI canonical 16."
+        )
+    with open(STYLE_REFS_MANIFEST_PATH) as f:
+        manifest = _json.load(f)
+    refs_dir = STYLE_REFS_MANIFEST_PATH.parent
+    out = []
+    for r in manifest["refs"]:
+        out.append({
+            "filename": r["filename"],
+            "tags": list(r.get("tags", [])),
+            "weight": float(r.get("weight", manifest.get("default_weight", 0.3))),
+            "source": "canonical",
+            "notes": r.get("notes", ""),
+            "local_path": str(refs_dir / r["filename"]),
+        })
+    return out
+
+
+def _load_catherine_picks() -> list:
+    """Return Catherine's 3 picks with their hardcoded tags.
+
+    These live on the Modal volume at /models/style_references/. Tag mapping
+    is hardcoded per the brief (option b) since no metadata is stored on the
+    volume alongside the images.
+    """
+    return [{
+        "filename": p["filename"],
+        "tags": list(p["tags"]),
+        "weight": float(p["weight"]),
+        "source": "catherine",
+        "notes": p["notes"],
+        "local_path": None,  # not local — fetched from Modal volume at render time
+    } for p in CATHERINE_PICKS]
+
+
+def _all_refs() -> list:
+    """Return the unified 19 references (16 canonical + 3 Catherine picks)."""
+    return _load_canonical_refs() + _load_catherine_picks()
+
+
+def _score_ref(ref: dict, space_type: str, tag_weights: dict) -> float:
+    """Score a single ref against the target space_type.
+
+    score = base_weight * sum(tag_weights[space_type][tag] for tag in ref.tags)
+    Returns 0.0 if the space_type is not in tag_weights (selector would skip).
+    """
+    if space_type not in tag_weights:
+        return 0.0
+    multipliers = tag_weights[space_type]
+    score = 0.0
+    for tag in ref["tags"]:
+        m = multipliers.get(tag, 0.0)
+        score += ref["weight"] * float(m)
+    return score
+
+
+def select_style_ref(space_type: str, override_filename: str = None) -> dict:
+    """Pick the best style reference for the given room type.
+
+    Args:
+        space_type: One of "kitchen", "living", "bath", "exterior", "entry",
+                    "dining". Must be a key in tag_weights.
+        override_filename: If set, return this specific ref (skip scoring).
+                           Must match a filename in the unified 19.
+
+    Returns:
+        Dict with keys: filename, tags, weight, source, score, local_path,
+        and a `why` string explaining the pick.
+
+    Raises:
+        FileNotFoundError: if style-refs.json manifest is missing.
+        ValueError: if space_type is unknown or override_filename doesn't match.
+    """
+    import json as _json
+    if not STYLE_REFS_MANIFEST_PATH.exists():
+        raise FileNotFoundError(f"style-refs.json manifest not found at {STYLE_REFS_MANIFEST_PATH}")
+    with open(STYLE_REFS_MANIFEST_PATH) as f:
+        manifest = _json.load(f)
+    tag_weights = manifest["tag_weights"]
+
+    refs = _all_refs()
+
+    if override_filename:
+        for r in refs:
+            if r["filename"] == override_filename:
+                score = _score_ref(r, space_type, tag_weights) if space_type in tag_weights else r["weight"]
+                return {
+                    "filename": r["filename"],
+                    "tags": r["tags"],
+                    "weight": r["weight"],
+                    "source": r["source"],
+                    "score": score,
+                    "local_path": r.get("local_path"),
+                    "why": f"explicit override ({override_filename}); space_type={space_type} score={score:.3f}",
+                }
+        raise ValueError(
+            f"override_filename={override_filename!r} not found in unified 19 refs. "
+            f"Available: {[r['filename'] for r in refs]}"
+        )
+
+    if space_type not in tag_weights:
+        raise ValueError(
+            f"unknown space_type={space_type!r}. Valid: {list(tag_weights.keys())}"
+        )
+
+    scored = [(r, _score_ref(r, space_type, tag_weights)) for r in refs]
+    # Filter out refs with score 0 (no tag overlap with this space_type)
+    scored = [(r, s) for r, s in scored if s > 0]
+    if not scored:
+        raise RuntimeError(
+            f"smart selector found zero refs with positive score for space_type={space_type!r}. "
+            "This is a bug — every space_type should match at least the base 'interior' tag."
+        )
+    scored.sort(key=lambda rs: rs[1], reverse=True)
+    top_ref, top_score = scored[0]
+
+    # Build "why" string: top 3 contributors
+    multipliers = tag_weights[space_type]
+    contribs = []
+    for tag in top_ref["tags"]:
+        m = multipliers.get(tag, 0.0)
+        if m > 0:
+            contribs.append((tag, top_ref["weight"] * m))
+    contribs.sort(key=lambda c: c[1], reverse=True)
+    why_parts = [
+        f"ref={top_ref['filename']} ({top_ref['source']}) score={top_score:.3f}",
+        f"top_tag_contribs: " + ", ".join(f"{t}={s:.3f}" for t, s in contribs[:3]),
+        f"space_type={space_type} matched against {sum(1 for r, s in scored if s > 0)} refs",
+    ]
+    return {
+        "filename": top_ref["filename"],
+        "tags": top_ref["tags"],
+        "weight": top_ref["weight"],
+        "source": top_ref["source"],
+        "score": top_score,
+        "local_path": top_ref.get("local_path"),
+        "why": " | ".join(why_parts),
+        "scored_candidates": [
+            {"filename": r["filename"], "source": r["source"], "score": s}
+            for r, s in scored[:6]
+        ],
+    }
+
+
+# ---------------------------------------------------------------------------
 # Workflow builder
 # ---------------------------------------------------------------------------
 
@@ -165,6 +387,14 @@ def build_workflow(image_name: str = "enscape_input.png",
                    *,
                    positive: str = DEFAULT_POSITIVE,
                    negative: str = DEFAULT_NEGATIVE,
+                   # v7.4: optional style-reference wiring. style_image_name=None
+                   # means the v7.3 BASE workflow (no second LoadImage, image1
+                   # only on both TextEncodeQwenImageEditPlus instances).
+                   # Setting style_image_name adds a second LoadImage (node 100)
+                   # and wires its output to image2 on BOTH encode nodes. The
+                   # caller is expected to upload the style image to ComfyUI's
+                   # input dir first (handled in _render_single).
+                   style_image_name: str = None,
                    # Full-quality path (default — per-image best result):
                    steps: int = 40,
                    cfg: float = 4.0,
@@ -305,23 +535,47 @@ def build_workflow(image_name: str = "enscape_input.png",
     # image1 carries the source render's pixels (read by Qwen2.5-VL encoder
     # inside the node). TextEncodeQwenImageEditPlus is what makes this an EDIT
     # rather than a regeneration.
+    #
+    # v7.4: when style_image_name is set, a second LoadImage (node 100) is added
+    # and its output is wired to BOTH encode nodes' image2 input. The model
+    # treats image1 as "Figure 1" (the source to edit) and image2 as
+    # "Figure 2" (the style reference). The positive prompt in that case
+    # should be DEFAULT_POSITIVE_STYLE (or equivalent) telling the model to
+    # match Figure 2's style onto Figure 1.
+    style_image2_ref = None
+    if style_image_name:
+        g["100"] = {
+            "inputs": {"image": style_image_name, "upload": "image"},
+            "class_type": "LoadImage",
+            "_meta": {"title": "Load Style Reference (Figure 2)"},
+        }
+        style_image2_ref = ["100", 0]
+    image1_ref = ["1", 0]
+    image2_ref = style_image2_ref  # None when v7.3 BASE behavior
+
+    encode_positive_inputs = {
+        "prompt": positive,
+        "clip": ["4", 0],
+        "vae": ["5", 0],
+        "image1": image1_ref,
+    }
+    encode_negative_inputs = {
+        "prompt": negative,
+        "clip": ["4", 0],
+        "vae": ["5", 0],
+        "image1": image1_ref,
+    }
+    if image2_ref is not None:
+        encode_positive_inputs["image2"] = image2_ref
+        encode_negative_inputs["image2"] = image2_ref
+
     g["8"] = {
-        "inputs": {
-            "prompt": positive,
-            "clip": ["4", 0],
-            "vae": ["5", 0],
-            "image1": ["1", 0],
-        },
+        "inputs": encode_positive_inputs,
         "class_type": "TextEncodeQwenImageEditPlus",
         "_meta": {"title": "Qwen Edit Encode (Positive / instruction)"},
     }
     g["9"] = {
-        "inputs": {
-            "prompt": negative,
-            "clip": ["4", 0],
-            "vae": ["5", 0],
-            "image1": ["1", 0],
-        },
+        "inputs": encode_negative_inputs,
         "class_type": "TextEncodeQwenImageEditPlus",
         "_meta": {"title": "Qwen Edit Encode (Negative)"},
     }
@@ -868,7 +1122,16 @@ class TruRenderQwen:
                        depth_strength: float = 0.3,
                        output_format: str = "png",
                        positive: str = None,
-                       negative: str = None) -> tuple:
+                       negative: str = None,
+                       # v7.4 multi-image style-reference conditioning.
+                       # style_image_bytes=None → v7.3 BASE behavior (image1
+                       # only). Set to enable the v7.4 path: the bytes get
+                       # uploaded as a second LoadImage and wired to image2
+                       # on both TextEncodeQwenImageEditPlus instances. The
+                       # positive prompt in that case is expected to be
+                       # DEFAULT_POSITIVE_STYLE (or compatible).
+                       style_image_bytes: bytes = None,
+                       style_image_name: str = None) -> tuple:
         """Run a single Qwen-Image-Edit render through ComfyUI.
 
         Returns (output_image_bytes, elapsed_seconds).
@@ -889,6 +1152,12 @@ class TruRenderQwen:
         behavior bit-identically. 0.3 = the noise-reduction sweet spot (-56%
         right-edge TR/TL noise vs v7.2 baseline). Range: -10.0 to 10.0 (matches
         QwenImageDiffsynthControlnet node's range). Practical range 0.0-1.0.
+
+        v7.4: style_image_bytes (raw image bytes) and style_image_name
+        (pre-uploaded filename on the ComfyUI input dir, optional) — if either
+        is set, the workflow is built with a second LoadImage and image2 wiring.
+        style_image_bytes is preferred; style_image_name is for callers that
+        pre-staged the file.
         """
         from PIL import Image as PILImage
         start = time.time()
@@ -918,6 +1187,19 @@ class TruRenderQwen:
         filename = f"trurender_v7_input_{client_id[:8]}.png"
         uploaded_name = self._upload_image(image_bytes, filename)
 
+        # v7.4: optionally upload + wire a style reference image.
+        # bytes win over name — if bytes are provided, we always upload them
+        # and ignore the caller-supplied name. This is because ComfyUI's
+        # LoadImage node can only load files from its input dir; a name
+        # pointing at a non-existent file is rejected with HTTP 400.
+        if style_image_bytes is not None:
+            style_filename = f"trurender_v7_style_{client_id[:8]}.jpg"
+            uploaded_style_name = self._upload_image(style_image_bytes, style_filename)
+            print(f"[TruRender v7.4] style image uploaded: {uploaded_style_name} "
+                  f"({len(style_image_bytes)} bytes)")
+        else:
+            uploaded_style_name = style_image_name  # may be None (v7.3 BASE)
+
         # Build and submit workflow
         workflow = build_workflow(
             image_name=uploaded_name,
@@ -935,6 +1217,7 @@ class TruRenderQwen:
             use_fp8=use_fp8,
             use_lightning_lora=use_lightning_lora,
             depth_strength=depth_strength,
+            style_image_name=uploaded_style_name,
             filename_prefix=f"trurender_v7_{client_id[:8]}",
         )
 
@@ -970,6 +1253,14 @@ def render(
     target_height: int = None,
     positive: str = None,
     negative: str = None,
+    # v7.4: style-reference conditioning.
+    # style_image_name=None → v7.3 BASE (backward compatible).
+    # Set to a filename from the unified 19 (or pass --style-image-b64 to
+    # upload ad-hoc). space_type is used by the smart selector when
+    # style_image_name is None. Defaults to "kitchen" if both unset.
+    style_image_name: str = None,
+    space_type: str = None,
+    style_image_b64: str = None,
 ):
     """Render an Enscape image with the v7 (Qwen-Image-Edit) pipeline.
 
@@ -979,13 +1270,27 @@ def render(
         modal run trurender_qwen_comfyui.py::render --input-path ... --positive "..." --cfg 3.5 --seed 42
         modal run trurender_qwen_comfyui.py::render --input-path ... --depth-strength 0.0   # disable v7.3 backstop
 
+        # v7.4: smart selector picks the best CTAI/Catherine ref for the room
+        modal run trurender_qwen_comfyui.py::render --input-path ... --space-type kitchen
+
+        # v7.4: explicit style ref
+        modal run trurender_qwen_comfyui.py::render --input-path ... --style-image-name Charlestown-12-scaled.jpg
+
+        # v7.4: ad-hoc style image (base64 in the request)
+        modal run trurender_qwen_comfyui.py::render --input-path ... --style-image-b64 "$(base64 -i ref.jpg)"
+
     By default, the v7 hardcoded DEFAULT_POSITIVE/DEFAULT_NEGATIVE are used. Pass
     --positive / --negative to override (used by parameter sweeps). When passing
     --positive from a shell, use single quotes; the CLI forwards verbatim.
+    When --style-image-name is set, --positive is auto-replaced with
+    DEFAULT_POSITIVE_STYLE unless the caller also passes --positive (caller
+    wins; the v7.4 trigger is what we want for raw style transfer but a custom
+    prompt is still allowed).
 
     depth_strength (default 0.3 in v7.3) is the DiffSynth depth ControlNet
     backstop. Pass --depth-strength 0.0 to disable (preserves v7.2 behavior).
     """
+    import base64 as _b64
     from datetime import datetime
 
     input_path = Path(input_path)
@@ -1002,12 +1307,61 @@ def render(
         output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
+    # v7.4: resolve style image
+    style_image_bytes = None
+    if style_image_b64:
+        style_image_bytes = _b64.b64decode(style_image_b64)
+        print(f"[TruRender v7.4] style-image-b64: decoded {len(style_image_bytes)} bytes")
+
+    if style_image_name is None and style_image_bytes is None and space_type is None:
+        # Backward compat: no style ref requested
+        effective_space_type = None
+        effective_style_name = None
+    else:
+        effective_space_type = space_type or "kitchen"
+        if style_image_name is None and style_image_bytes is None:
+            # Run the smart selector locally to resolve a filename
+            try:
+                pick = select_style_ref(effective_space_type, override_filename=None)
+                effective_style_name = pick["filename"]
+                print(f"[TruRender v7.4] smart selector ({effective_space_type}) → "
+                      f"{pick['filename']} (source={pick['source']}, score={pick['score']:.3f})")
+                print(f"[TruRender v7.4] why: {pick['why']}")
+                # If the picked ref has a local path (canonical set), read
+                # the bytes and pass them — ComfyUI's input dir doesn't
+                # have these files staged, so we must upload them.
+                if pick.get("local_path") and os.path.exists(pick["local_path"]):
+                    with open(pick["local_path"], "rb") as _f:
+                        style_image_bytes = _f.read()
+                    print(f"[TruRender v7.4] read {len(style_image_bytes)} bytes from "
+                          f"{pick['local_path']}")
+                else:
+                    # Catherine pick or missing local file. Surface a
+                    # clear warning.
+                    print(f"[TruRender v7.4] WARNING: picked ref {pick['filename']!r} "
+                          f"has no local_path; cannot upload to ComfyUI without "
+                          f"volume-staged copy. (selector source={pick['source']})")
+                    effective_style_name = None
+            except Exception as e:
+                print(f"[TruRender v7.4] selector error: {e}")
+                effective_style_name = None
+        else:
+            effective_style_name = style_image_name
+
+    # Auto-swap positive to v7.4 trigger when style ref is in play and caller
+    # didn't supply a custom positive.
+    if effective_style_name is not None and positive is None:
+        positive = DEFAULT_POSITIVE_STYLE
+        print(f"[TruRender v7.4] positive auto-set to DEFAULT_POSITIVE_STYLE")
+
     # Call the remote class
     output_bytes, elapsed = TruRenderQwen()._render_single.remote(
         image_bytes, seed=seed, target_width=target_width, target_height=target_height,
         steps=steps, cfg=cfg, use_fp8=use_fp8, use_lightning_lora=use_lightning_lora,
         depth_strength=depth_strength,
         positive=positive, negative=negative,
+        style_image_bytes=style_image_bytes,
+        style_image_name=effective_style_name,
     )
 
     output_path.write_bytes(output_bytes)
@@ -1027,6 +1381,10 @@ def render_options(
     depth_strength: float = 0.3,
     positive: str = None,
     negative: str = None,
+    # v7.4: style-reference conditioning (same as render)
+    style_image_name: str = None,
+    space_type: str = None,
+    style_image_b64: str = None,
 ):
     """Render N seed-variation options in ONE warm Modal container (production entrypoint).
 
@@ -1088,6 +1446,42 @@ def render_options(
     stem = input_path.stem
     written = []
     started = time.time()
+
+    # v7.4: resolve style image once for the whole options run
+    import base64 as _b64
+    style_image_bytes = None
+    if style_image_b64:
+        style_image_bytes = _b64.b64decode(style_image_b64)
+    if style_image_name is None and style_image_bytes is None and space_type is None:
+        effective_space_type = None
+        effective_style_name = None
+    else:
+        effective_space_type = space_type or "kitchen"
+        if style_image_name is None and style_image_bytes is None:
+            try:
+                pick = select_style_ref(effective_space_type, override_filename=None)
+                effective_style_name = pick["filename"]
+                print(f"[TruRender v7.4] smart selector ({effective_space_type}) → "
+                      f"{pick['filename']} (source={pick['source']}, score={pick['score']:.3f})")
+                # If picked ref has a local_path, read the bytes for upload.
+                if pick.get("local_path") and os.path.exists(pick["local_path"]):
+                    with open(pick["local_path"], "rb") as _f:
+                        style_image_bytes = _f.read()
+                    print(f"[TruRender v7.4] read {len(style_image_bytes)} bytes from "
+                          f"{pick['local_path']}")
+                else:
+                    print(f"[TruRender v7.4] WARNING: picked ref {pick['filename']!r} "
+                          f"has no local_path; cannot upload to ComfyUI without "
+                          f"volume-staged copy. (selector source={pick['source']})")
+                    effective_style_name = None
+            except Exception as e:
+                print(f"[TruRender v7.4] selector error: {e}")
+                effective_style_name = None
+        else:
+            effective_style_name = style_image_name
+    if effective_style_name is not None and positive is None:
+        positive = DEFAULT_POSITIVE_STYLE
+
     for i, seed in enumerate(seeds, start=1):
         out_name = f"{stem}_opt_{i:02d}_seed{seed}.png"
         out_path = output_dir / out_name
@@ -1103,6 +1497,8 @@ def render_options(
                 depth_strength=depth_strength,
                 positive=positive,
                 negative=negative,
+                style_image_bytes=style_image_bytes,
+                style_image_name=effective_style_name,
             )
             out_path.write_bytes(output_bytes)
             wall = time.time() - cell_start
@@ -1188,6 +1584,10 @@ def sweep(
     use_fp8 = common.get("use_fp8", True)
     use_lightning_lora = common.get("use_lightning_lora", False)
     common_depth_strength = common.get("depth_strength", 0.3)
+    # v7.4: common-block style-ref params (per-cell overrides still possible)
+    common_style_image_name = common.get("style_image_name", None)
+    common_space_type = common.get("space_type", None)
+    common_style_image_b64 = common.get("style_image_b64", None)
 
     print(f"[TruRender v7 sweep] input: {input_path} ({len(image_bytes)} bytes)")
     print(f"[TruRender v7 sweep] output_dir: {output_dir}")
@@ -1195,9 +1595,20 @@ def sweep(
     print(f"[TruRender v7 sweep] common: seed={seed} steps={steps} "
           f"sampler={sampler_name}/{scheduler} fp8={use_fp8} lightning={use_lightning_lora} "
           f"depth_strength={common_depth_strength}")
+    if common_style_image_name or common_space_type or common_style_image_b64:
+        print(f"[TruRender v7 sweep] v7.4 common: style_image_name={common_style_image_name} "
+              f"space_type={common_space_type} style_image_b64={'<set>' if common_style_image_b64 else None}")
 
     # Instantiate the class ONCE — keeps the warm ComfyUI server alive across cells
     service = TruRenderQwen()
+
+    # v7.4: decode common-block style_image_b64 once (used for cells that
+    # don't override it)
+    import base64 as _b64
+    common_style_image_bytes = None
+    if common_style_image_b64:
+        common_style_image_bytes = _b64.b64decode(common_style_image_b64)
+        print(f"[TruRender v7 sweep] common style_image_b64: {len(common_style_image_bytes)} bytes")
 
     sweep_start = time.time()
     results = []
@@ -1226,11 +1637,80 @@ def sweep(
                                           common.get("cfgnorm_strength", 1.0))
         cell_depth_strength = cell.get("depth_strength",
                                         common.get("depth_strength", 0.3))
+        # v7.4 style-ref per-cell overrides
+        cell_style_image_name = cell.get("style_image_name", common_style_image_name)
+        cell_space_type = cell.get("space_type", common_space_type)
+        cell_style_image_b64 = cell.get("style_image_b64", common_style_image_b64)
+        cell_style_image_bytes = None
+        if cell_style_image_b64:
+            cell_style_image_bytes = _b64.b64decode(cell_style_image_b64)
+        # If a name was passed explicitly, try to resolve local bytes for it
+        # (canonical refs have a local_path; Catherine picks don't and need
+        # volume staging). Run the selector with override to get metadata.
+        if cell_style_image_name and cell_style_image_bytes is None:
+            try:
+                _pick = select_style_ref(
+                    cell.get("space_type", common_space_type) or "kitchen",
+                    override_filename=cell_style_image_name,
+                )
+                if _pick.get("local_path") and os.path.exists(_pick["local_path"]):
+                    with open(_pick["local_path"], "rb") as _f:
+                        cell_style_image_bytes = _f.read()
+                    print(f"[TruRender v7.4] cell {code}: read {len(cell_style_image_bytes)} bytes "
+                          f"from {_pick['local_path']}")
+            except Exception as e:
+                print(f"[TruRender v7.4] cell {code}: override-name resolution error: {e}")
+
+        # v7.4: resolve smart selector if no explicit name + no b64
+        if (cell_style_image_name is None
+                and cell_style_image_bytes is None
+                and (cell_space_type is not None or common_space_type is not None)):
+            effective_space_type = cell_space_type or "kitchen"
+            try:
+                pick = select_style_ref(effective_space_type, override_filename=None)
+                cell_style_image_name = pick["filename"]
+                # If the picked ref has a local path (canonical set), read the
+                # bytes and pass them — ComfyUI's input dir doesn't have these
+                # files staged, and the LoadImage node can't fetch from
+                # /Users/...; the bytes must be uploaded by _render_single.
+                if pick.get("local_path") and os.path.exists(pick["local_path"]):
+                    with open(pick["local_path"], "rb") as _f:
+                        cell_style_image_bytes = _f.read()
+                    if i == 1:
+                        print(f"[TruRender v7.4] smart selector ({effective_space_type}) → "
+                              f"{pick['filename']} (source={pick['source']}, score={pick['score']:.3f})")
+                        print(f"[TruRender v7.4] why: {pick['why']}")
+                        print(f"[TruRender v7.4] read {len(cell_style_image_bytes)} bytes from "
+                              f"{pick['local_path']}")
+                else:
+                    # Catherine pick (no local_path) — can't upload from
+                    # local; would need volume-staged copy. Surface as a
+                    # clear error rather than silently failing.
+                    if i == 1:
+                        print(f"[TruRender v7.4] WARNING: picked ref {pick['filename']!r} "
+                              f"has no local_path; cannot upload to ComfyUI without "
+                              f"volume-staged copy. (selector source={pick['source']})")
+                    cell_style_image_name = None
+            except Exception as e:
+                print(f"[TruRender v7.4] selector error: {e}")
+                cell_style_image_name = None
+
+        # Auto-swap positive to v7.4 trigger when style ref is in play
+        # and the cell's positive is the v7 default (i.e. not custom).
+        v7_default_positive = DEFAULT_POSITIVE
+        is_cell_positive_default = (positive == v7_default_positive)
+        if cell_style_image_name is not None and is_cell_positive_default:
+            positive = DEFAULT_POSITIVE_STYLE
+            if i == 1:
+                print(f"[TruRender v7.4] positive auto-swapped to DEFAULT_POSITIVE_STYLE")
 
         print(f"\n=== cell {i}/{len(cells)}: {code} (seed={cell_seed} cfg={cfg} "
               f"steps={cell_steps} {cell_sampler_name}/{cell_scheduler} "
               f"fp8={cell_use_fp8} shift={cell_model_sampling_shift} "
-              f"cfgnorm={cell_cfgnorm_strength} depth={cell_depth_strength}) ===")
+              f"cfgnorm={cell_cfgnorm_strength} depth={cell_depth_strength}"
+              f"{' style=' + cell_style_image_name if cell_style_image_name else ''}"
+              f"{' style_b64' if cell_style_image_bytes else ''}"
+              f") ===")
         cell_start = time.time()
         try:
             output_bytes, render_elapsed = service._render_single.remote(
@@ -1247,6 +1727,8 @@ def sweep(
                 depth_strength=cell_depth_strength,
                 positive=positive,
                 negative=negative,
+                style_image_bytes=cell_style_image_bytes,
+                style_image_name=cell_style_image_name,
             )
             out_path.write_bytes(output_bytes)
             wall = time.time() - cell_start
@@ -1272,6 +1754,8 @@ def sweep(
             "cfgnorm_strength": cell_cfgnorm_strength,
             "use_fp8": cell_use_fp8,
             "depth_strength": cell_depth_strength,
+            "style_image_name": cell_style_image_name,
+            "space_type": cell_space_type,
             "ok": ok,
             "wall_s": wall,
             "render_s": (render_elapsed if ok else None),
@@ -1289,7 +1773,11 @@ def sweep(
         "common": {"seed": seed, "steps": steps, "sampler_name": sampler_name,
                    "scheduler": scheduler, "use_fp8": use_fp8,
                    "use_lightning_lora": use_lightning_lora,
-                   "depth_strength": common_depth_strength},
+                   "depth_strength": common_depth_strength,
+                   # v7.4
+                   "style_image_name": common_style_image_name,
+                   "space_type": common_space_type,
+                   "style_image_b64": ("<set>" if common_style_image_b64 else None)},
         "finished_at": _dt.now().astimezone().isoformat(timespec="seconds"),
         "total_sweep_s": total_sweep_s,
         "ok_count": ok_count,

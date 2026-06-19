@@ -1,0 +1,34 @@
+{
+  "input_path": "/Users/doxa/.openclaw/workspace/trurender_endpoint/inputs/enscape_input.png",
+  "output_dir": "/Users/doxa/.openclaw/workspace/trurender_endpoint/outputs/v7_4_probe",
+  "common": {
+    "seed": 42,
+    "steps": 40,
+    "cfg": 4.0,
+    "sampler_name": "euler",
+    "scheduler": "simple",
+    "use_fp8": true,
+    "use_lightning_lora": false,
+    "model_sampling_shift": 3.1,
+    "cfgnorm_strength": 1.0,
+    "depth_strength": 0.3
+  },
+  "cells": [
+    {
+      "code": "BASE",
+      "output": "base.png",
+      "positive": "Turn this 3D architectural rendering into a photorealistic interior photograph. Preserve the exact room layout, camera angle, and perspective, and keep every element in the scene in identical positions, shapes, proportions, and colors: all walls, windows and mullions, cabinetry, countertops, the kitchen island, appliances, pendant lights, dining table, chairs, plants, and all decor. Do not add, remove, relocate, resize, or restyle any object, and do not change any material or finish. Change ONLY the rendering quality to that of a real photograph: physically accurate natural daylight from the windows with soft directional shadows and gentle falloff; true material microtexture (visible wood grain, natural stone veining in the marble, fabric weave on the upholstery, brushed and polished metal on the hardware and faucet, real glass with subtle reflections and slight impurity, plaster walls with faint surface variation); realistic global illumination and contact shadows; and authentic camera optics and color response. Hasselblad medium-format quality, photographed for Architectural Digest, indistinguishable from a real photo.",
+      "negative": "3D render, plastic surfaces, distorted geometry, text, watermark, added furniture",
+      "style_image_name": null,
+      "space_type": null
+    },
+    {
+      "code": "IMG",
+      "output": "img_only.png",
+      "positive": "Change the style of Figure 1 to the style of Figure 2. Photorealistic interior photograph. Preserve exact room layout, camera angle, and object positions. Do not change any material or finish.",
+      "negative": "3D render, plastic surfaces, distorted geometry, text, watermark, added furniture",
+      "style_image_name": null,
+      "space_type": "kitchen"
+    }
+  ]
+}
