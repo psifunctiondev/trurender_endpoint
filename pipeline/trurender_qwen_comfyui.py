@@ -1322,6 +1322,21 @@ def render(
                 print(f"[TruRender v7.4] smart selector ({effective_space_type}) → "
                       f"{pick['filename']} (source={pick['source']}, score={pick['score']:.3f})")
                 print(f"[TruRender v7.4] why: {pick['why']}")
+                # If the picked ref has a local path (canonical set), read
+                # the bytes and pass them — ComfyUI's input dir doesn't
+                # have these files staged, so we must upload them.
+                if pick.get("local_path") and os.path.exists(pick["local_path"]):
+                    with open(pick["local_path"], "rb") as _f:
+                        style_image_bytes = _f.read()
+                    print(f"[TruRender v7.4] read {len(style_image_bytes)} bytes from "
+                          f"{pick['local_path']}")
+                else:
+                    # Catherine pick or missing local file. Surface a
+                    # clear warning.
+                    print(f"[TruRender v7.4] WARNING: picked ref {pick['filename']!r} "
+                          f"has no local_path; cannot upload to ComfyUI without "
+                          f"volume-staged copy. (selector source={pick['source']})")
+                    effective_style_name = None
             except Exception as e:
                 print(f"[TruRender v7.4] selector error: {e}")
                 effective_style_name = None
@@ -1443,6 +1458,17 @@ def render_options(
                 effective_style_name = pick["filename"]
                 print(f"[TruRender v7.4] smart selector ({effective_space_type}) → "
                       f"{pick['filename']} (source={pick['source']}, score={pick['score']:.3f})")
+                # If picked ref has a local_path, read the bytes for upload.
+                if pick.get("local_path") and os.path.exists(pick["local_path"]):
+                    with open(pick["local_path"], "rb") as _f:
+                        style_image_bytes = _f.read()
+                    print(f"[TruRender v7.4] read {len(style_image_bytes)} bytes from "
+                          f"{pick['local_path']}")
+                else:
+                    print(f"[TruRender v7.4] WARNING: picked ref {pick['filename']!r} "
+                          f"has no local_path; cannot upload to ComfyUI without "
+                          f"volume-staged copy. (selector source={pick['source']})")
+                    effective_style_name = None
             except Exception as e:
                 print(f"[TruRender v7.4] selector error: {e}")
                 effective_style_name = None
@@ -1613,6 +1639,22 @@ def sweep(
         cell_style_image_bytes = None
         if cell_style_image_b64:
             cell_style_image_bytes = _b64.b64decode(cell_style_image_b64)
+        # If a name was passed explicitly, try to resolve local bytes for it
+        # (canonical refs have a local_path; Catherine picks don't and need
+        # volume staging). Run the selector with override to get metadata.
+        if cell_style_image_name and cell_style_image_bytes is None:
+            try:
+                _pick = select_style_ref(
+                    cell.get("space_type", common_space_type) or "kitchen",
+                    override_filename=cell_style_image_name,
+                )
+                if _pick.get("local_path") and os.path.exists(_pick["local_path"]):
+                    with open(_pick["local_path"], "rb") as _f:
+                        cell_style_image_bytes = _f.read()
+                    print(f"[TruRender v7.4] cell {code}: read {len(cell_style_image_bytes)} bytes "
+                          f"from {_pick['local_path']}")
+            except Exception as e:
+                print(f"[TruRender v7.4] cell {code}: override-name resolution error: {e}")
 
         # v7.4: resolve smart selector if no explicit name + no b64
         if (cell_style_image_name is None
@@ -1622,10 +1664,28 @@ def sweep(
             try:
                 pick = select_style_ref(effective_space_type, override_filename=None)
                 cell_style_image_name = pick["filename"]
-                if i == 1:
-                    print(f"[TruRender v7.4] smart selector ({effective_space_type}) → "
-                          f"{pick['filename']} (source={pick['source']}, score={pick['score']:.3f})")
-                    print(f"[TruRender v7.4] why: {pick['why']}")
+                # If the picked ref has a local path (canonical set), read the
+                # bytes and pass them — ComfyUI's input dir doesn't have these
+                # files staged, and the LoadImage node can't fetch from
+                # /Users/...; the bytes must be uploaded by _render_single.
+                if pick.get("local_path") and os.path.exists(pick["local_path"]):
+                    with open(pick["local_path"], "rb") as _f:
+                        cell_style_image_bytes = _f.read()
+                    if i == 1:
+                        print(f"[TruRender v7.4] smart selector ({effective_space_type}) → "
+                              f"{pick['filename']} (source={pick['source']}, score={pick['score']:.3f})")
+                        print(f"[TruRender v7.4] why: {pick['why']}")
+                        print(f"[TruRender v7.4] read {len(cell_style_image_bytes)} bytes from "
+                              f"{pick['local_path']}")
+                else:
+                    # Catherine pick (no local_path) — can't upload from
+                    # local; would need volume-staged copy. Surface as a
+                    # clear error rather than silently failing.
+                    if i == 1:
+                        print(f"[TruRender v7.4] WARNING: picked ref {pick['filename']!r} "
+                              f"has no local_path; cannot upload to ComfyUI without "
+                              f"volume-staged copy. (selector source={pick['source']})")
+                    cell_style_image_name = None
             except Exception as e:
                 print(f"[TruRender v7.4] selector error: {e}")
                 cell_style_image_name = None
